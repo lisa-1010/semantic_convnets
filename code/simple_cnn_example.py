@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 
-""" Convolutional network applied to CIFAR-10 dataset classification task.
+"""
+A slightly modified tflearn example.
+
+Convolutional network applied to CIFAR-10 dataset classification task.
 References:
     Learning Multiple Layers of Features from Tiny Images, A. Krizhevsky, 2009.
 Links:
     [CIFAR-10 Dataset](https://www.cs.toronto.edu/~kriz/cifar.html)
+
+
 """
 from __future__ import division, print_function, absolute_import
 
