@@ -31,6 +31,7 @@ import tflearn
 from tflearn.data_utils import shuffle, to_categorical
 from sklearn.metrics import accuracy_score
 
+import numpy as np
 from utils import *
 from data_utils import *
 
@@ -110,7 +111,7 @@ def train_model(model_id='simple_cnn', dataset='cifar10', load_checkpoint=False)
     # Train using classifier
     model = load_model(model_id=model_id, load_checkpoint=load_checkpoint, is_training=True)
     model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=(X_test, Y_test),
-              show_metric=True, batch_size=96, run_id='cifar10_cnn')
+              show_metric=True, batch_size=96, run_id='cifar10_cnn', snapshot_step=100)
 
 
 def test_model(model_id='simple_cnn', dataset='cifar10'):
@@ -120,7 +121,8 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
 
     # Train using classifier
     model = load_model(model_id, load_checkpoint=True, is_training=False)
-    pred_train = np.argmax(model.predict(X), axis=1)
+    pred_train_probs = model.predict(X)
+    pred_train = np.argmax(pred_train_probs, axis=1)
     pred_test_probs = model.predict(X_test)
     pred_test = np.argmax(pred_test_probs, axis=1)
     train_acc = accuracy_score(pred_train, np.argmax(y_train, axis=1))
@@ -168,7 +170,7 @@ def read_commandline_args():
 def main():
     mode, model_id, dataset = read_commandline_args()
     if mode == 'train':
-        train_model(model_id, dataset)
+        train_model(model_id, dataset, load_checkpoint=True)
     elif mode == 'test':
         test_model(model_id, dataset)
 
