@@ -1,3 +1,9 @@
+checkpoints/
+
+best_checkpoints/
+
+tensorboard_logs/
+
 data/*
 
 venv/
