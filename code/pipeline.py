@@ -156,8 +156,8 @@ def read_commandline_args():
             assert False, "unhandled option"
 
     if mode == None:
-        mode = 'test'
-        print ("Using default mode: test. To train, please specify with commandline arg '-t train' ")
+        mode = 'train'
+        print ("Using default mode: train. To test, please specify with commandline arg '-t test ")
 
     if model_id == None:
         model_id = 'simple_cnn'
