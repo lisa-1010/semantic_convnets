@@ -20,6 +20,10 @@ import cPickle as pickle
 from scipy.misc import imread
 
 
+CIFAR10_DIR = '../data/cifar-10-batches-py'
+CIFAR100_DIR = '../data/cifar-100-python'
+
+
 def change_to_array(M, H, W):
     N = len(M[0])
     X = np.array(M[0], dtype=float32).reshape((N,1,H,W))
@@ -28,27 +32,31 @@ def change_to_array(M, H, W):
 
 
 
-def load_cifar(num_training=49000, num_validation=1000, num_test=1000, dataset='cifar10'):
+def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset='cifar10'):
     """
     WARNING: Needs to be run from code directory, otherwise relative path
     will not work.
-    Load the CIFAR-10 dataset from disk.
+    Load the CIFAR-10 or CIFAR-100 dataset from disk.
     Returns train, validation and test sets.
     Note that num_training, num_validation and num_test have to be > 0.
-    Adapted from CS231N assignment 1.
+
+    Important note for cifar100:
+    Since cifar100 images have both fine labels (100) and coarse labels (20 superclasses),
+    the returned y matrix has shape (num_samples, 2), where the first column corresponds to fine labels, and
+    second column corresponds to coarse labels.
+    Hence:
+    y_fine = y[:,0]
+    y_coarse = y[:,1]
     """
     # Load the raw CIFAR-10 data
+    assert (dataset in ['cifar10', 'cifar100']), "dataset has to be either cifar10 or cifar100. "
     if dataset == 'cifar10':
-        cifar10_dir = '../data/cifar-10-batches-py'
-        X_train, y_train, X_test, y_test = _load_cifar10(cifar10_dir)
+        X_train, y_train, X_test, y_test = _load_cifar10(CIFAR10_DIR)
     elif dataset == 'cifar100':
-        cifar100_dir = '../data/cifar-100-python'
-        X_train, y_fine_train, y_coarse_train, X_test, y_fine_test, y_coarse_test = _load_cifar100(cifar100_dir)
+        X_train, y_fine_train, y_coarse_train, X_test, y_fine_test, y_coarse_test = _load_cifar100(CIFAR100_DIR)
         y_train = np.stack((y_fine_train, y_coarse_train)).swapaxes(0,1)
         y_test = np.stack((y_fine_test, y_coarse_test)).swapaxes(0,1)
-    else:
-        print "dataset not known. "
-        return
+
 
     # Subsample the data
     mask = range(num_training, num_training + num_validation)
@@ -62,29 +70,26 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=1000, dataset='
     y_test = y_test[mask]
 
     # Normalize the data: subtract the mean image
-    mean_image = np.mean(X_train, axis=0)
-    X_train -= mean_image
-    X_val -= mean_image
-    X_test -= mean_image
+    # mean_image = np.mean(X_train, axis=0)
+    # X_train -= mean_image
+    # X_val -= mean_image
+    # X_test -= mean_image
+    #
+    # # Reshape data to rows
 
-    # Reshape data to rows
+    # X_train = X_train.transpose((0, 3, 1, 2))
+    # X_val = X_val.transpose((0, 3, 1, 2))
+    # X_test = X_test.transpose((0, 3, 1, 2))
 
-    X_train = X_train.transpose((0, 3, 1, 2))
-    X_val = X_val.transpose((0, 3, 1, 2))
-    X_test = X_test.transpose((0, 3, 1, 2))
+    # X_train = X_train.astype(np.int32)
+    # X_val = X_val.astype(np.int32)
+    # X_test = X_test.astype(np.int32)
+    #
+    # y_train = y_train.astype(np.int32)
+    # y_val = y_val.astype(np.int32)
+    # y_test = y_test.astype(np.int32)
 
-    X_train = X_train.astype(np.int32)
-    X_val = X_val.astype(np.int32)
-    X_test = X_test.astype(np.int32)
-
-    y_train = y_train.astype(np.int32)
-    y_val = y_val.astype(np.int32)
-    y_test = y_test.astype(np.int32)
-    if dataset == 'cifar10':
-        return X_train, y_train, X_val, y_val, X_test, y_test
-    elif dataset == 'cifar100':
-        return X_train, y_train, X_val, y_val, X_test, y_test
-
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 def _load_cifar100(ROOT):
@@ -101,6 +106,7 @@ def _load_cifar100_batch(filename):
         X = datadict['data']
         Y_fine = datadict['fine_labels']
         Y_coarse = datadict['coarse_labels']
+
         num_samples = 0
         if batch_label == 'training batch 1 of 1':
             num_samples = 50000
@@ -142,16 +148,50 @@ def _load_cifar10_batch(filename):
         return X, Y
 
 
-if __name__=='__main__':
-    # X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1, num_test=1000, dataset='cifar10')
-    # print 'X_train shape: {}'.format(X_train.shape)
-    # print 'X_val shape: {}'.format(X_val.shape)
-    # print 'X_test shape: {}'.format(X_test.shape)
+def load_cifar10_label_names():
+    filename = os.path.join(CIFAR10_DIR, 'batches.meta')
+    with open(filename, 'rb') as f:
+        datadict = pickle.load(f)
+        label_names = datadict['label_names']
+        return label_names
 
-    X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1, num_test=1000,
+
+def load_cifar100_label_names(label_type='all'):
+    """
+    label_type:
+        'all': returns both fine and coarse labels
+        'fine': return only fine labels
+        'coarse': return only coarse labels
+    """
+    filename = os.path.join(CIFAR100_DIR, 'meta')
+    with open(filename, 'rb') as f:
+        datadict = pickle.load(f)
+        fine_label_names = datadict['fine_label_names']
+        coarse_label_names = datadict['coarse_label_names']
+        if label_type == 'all':
+            return fine_label_names, coarse_label_names
+        elif label_type == 'fine':
+            return fine_label_names
+        elif label_type == 'coarse':
+            return coarse_label_names
+
+
+if __name__=='__main__':
+    X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1, num_test=1000, dataset='cifar10')
+    print 'X_train shape: {}'.format(X_train.shape)
+    print 'y_train shape: {}'.format(y_train.shape)
+    print 'X_val shape: {}'.format(X_val.shape)
+    print 'X_test shape: {}'.format(X_test.shape)
+
+    X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1000, num_test=1000,
                                                                 dataset='cifar100')
     print 'X_train shape: {}'.format(X_train.shape)
     print 'y_train shape: {}'.format(y_train.shape)
     print 'X_val shape: {}'.format(X_val.shape)
     print 'X_test shape: {}'.format(X_test.shape)
 
+    label_names = load_cifar10_label_names()
+    print label_names
+    fine_label_names, coarse_label_names = load_cifar100_label_names()
+    print fine_label_names
+    print coarse_label_names
