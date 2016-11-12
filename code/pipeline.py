@@ -7,8 +7,8 @@
 #===============================================================================
 # DESCRIPTION:
 #
-# Exports
-#
+# Exports train and test functions for all network models and data sets.
+# Can be run from the command line.
 #===============================================================================
 # CURRENT STATUS: Working
 #===============================================================================
@@ -17,7 +17,7 @@
 # from pipeline import *
 #
 # Commandline:
-# python pipeline.py -m <model_id> -d <dataset>
+# python pipeline.py -t <train_or_test_mode> -m <model_id> -d <dataset>
 # or to get help:python pipeline.py -h
 #
 #===============================================================================
