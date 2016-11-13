@@ -125,7 +125,7 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
 
     X, Y, X_test, Y_test = load_data(dataset)
 
-    # Train using classifier
+    # Test using classifier
     model = load_model(model_id, load_checkpoint=True, is_training=False)
     pred_train_probs = model.predict(X)
     pred_train = np.argmax(pred_train_probs, axis=1)
