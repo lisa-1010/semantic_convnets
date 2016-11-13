@@ -1,1 +1,3 @@
 import simple_cnn
+import lenet_cnn
+import lenet_small_cnn

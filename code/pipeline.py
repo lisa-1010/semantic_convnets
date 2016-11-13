@@ -59,8 +59,10 @@ def load_model(model_id, load_checkpoint=False, is_training=False):
     network = load_network(model_id=model_id)
 
     if is_training:
-        model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir, \
-                            checkpoint_path=checkpoint_path, best_checkpoint_path=best_checkpoint_path, max_checkpoints=3)
+        # model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
+        #                     checkpoint_path=checkpoint_path, best_checkpoint_path=best_checkpoint_path, max_checkpoints=3)
+        model = tflearn.DNN(network)
+
     else:
         model = tflearn.DNN(network)
 
@@ -81,6 +83,10 @@ def load_network(model_id='simple_cnn'):
     network = None
     if model_id == 'simple_cnn':
         network = simple_cnn.build_network()
+    elif model_id == 'lenet_cnn':
+        network = lenet_cnn.build_network()
+    elif model_id == 'lenet_small_cnn':
+        network = lenet_small_cnn.build_network()
     else:
         print("Model {} not found. ".format(model_id))
         sys.exit()
