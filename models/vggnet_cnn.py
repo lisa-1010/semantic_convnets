@@ -18,6 +18,9 @@ from tflearn.layers.estimator import regression
 from tflearn.data_preprocessing import ImagePreprocessing
 from tflearn.data_augmentation import ImageAugmentation
 
+
+print("test")
+
 # Convolutional network building
 def build_network():
     # Real-time data preprocessing
@@ -33,17 +36,21 @@ def build_network():
     network = input_data(shape=[None, 32, 32, 3],
                          data_preprocessing=img_prep,
                          data_augmentation=img_aug)
-    network = conv_2d(network, 16, 3, activation='relu')
-    network = max_pool_2d(network, 2)
-    network = conv_2d(network, 32, 3, activation='relu')
-    network = max_pool_2d(network, 2)
     network = conv_2d(network, 64, 3, activation='relu')
+    network = conv_2d(network, 64, 3, activation='relu')
+    network = max_pool_2d(network, 2)
+    network = conv_2d(network, 128, 3, activation='relu')
+    network = conv_2d(network, 128, 3, activation='relu')
+    network = max_pool_2d(network, 2)
+    network = conv_2d(network, 256, 3, activation='relu')
+    network = conv_2d(network, 256, 3, activation='relu')
     network = max_pool_2d(network, 2)
 
     network = fully_connected(network, 512, activation='relu')
+    network = dropout(network, 0.5)
+
     network = fully_connected(network, 512, activation='relu')
-    network = fully_connected(network, 512, activation='relu')
-    network = fully_connected(network, 512, activation='relu')
+    network = dropout(network, 0.5)
 
     network = fully_connected(network, 10, activation='softmax')
     network = regression(network, optimizer='adam',
