@@ -25,11 +25,13 @@
 from __future__ import division, print_function, absolute_import
 
 import os, sys, getopt
+import datetime
 
 import tensorflow as tf
 import tflearn
 from tflearn.data_utils import shuffle, to_categorical
 from sklearn.metrics import accuracy_score
+import numpy as np
 
 import numpy as np
 from utils import *
@@ -39,8 +41,13 @@ sys.path.append("../") # so we can import models.
 from models import *
 #===============================================================================
 
+DATASET_TO_N_CLASSES = {
+    'cifar10' : 10,
+    'cifar100_coarse': 20,
+    'cifar100_fine': 100
+}
 
-def load_model(model_id, load_checkpoint=False, is_training=False):
+def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False):
     # should be used for all models
     print ('Loading model...')
 
@@ -56,13 +63,11 @@ def load_model(model_id, load_checkpoint=False, is_training=False):
     check_if_path_exists_or_create(checkpoint_path)
     check_if_path_exists_or_create(best_checkpoint_path)
 
-    network = load_network(model_id=model_id)
+    network = load_network(model_id=model_id, n_classes=n_classes)
 
     if is_training:
-        # model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
-        #                     checkpoint_path=checkpoint_path, best_checkpoint_path=best_checkpoint_path, max_checkpoints=3)
-        model = tflearn.DNN(network)
-
+        model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
+                            checkpoint_path=checkpoint_path, best_checkpoint_path=best_checkpoint_path, max_checkpoints=3)
     else:
         model = tflearn.DNN(network)
 
@@ -79,14 +84,15 @@ def load_model(model_id, load_checkpoint=False, is_training=False):
     return model
 
 
-def load_network(model_id='simple_cnn'):
+def load_network(model_id='simple_cnn', n_classes=10):
     network = None
+
     if model_id == 'simple_cnn':
-        network = simple_cnn.build_network()
+        network = simple_cnn.build_network(n_outputdim=n_classes)
     elif model_id == 'lenet_cnn':
-        network = lenet_cnn.build_network()
+        network = lenet_cnn.build_network(n_outputdim=n_classes)
     elif model_id == 'lenet_small_cnn':
-        network = lenet_small_cnn.build_network()
+        network = lenet_small_cnn.build_network(n_outputdim=n_classes)
     else:
         print("Model {} not found. ".format(model_id))
         sys.exit()
@@ -94,17 +100,32 @@ def load_network(model_id='simple_cnn'):
 
 
 def load_data(dataset='cifar10'):
+    print("Attempting to load dataset {} ...".format(dataset))
     X, Y, X_test, Y_test = None, None, None, None
+    n_classes = 0
     if dataset == 'cifar10':
         X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
                                                     dataset='cifar10')
+    elif dataset == 'cifar100_coarse':
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
+                                                        dataset='cifar100')
+        Y = Y[:,1]
+        Y_test = Y_test[:,1]
+
+    elif dataset == 'cifar100_fine':
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
+                                                        dataset='cifar100')
+        Y = Y[:, 0]
+        Y_test = Y_test[:, 0]
+
     else:
         print ("Dataset {} not found. ".format(dataset))
         sys.exit()
 
+    n_classes = DATASET_TO_N_CLASSES[dataset]
     X, Y = shuffle(X, Y)
-    Y = to_categorical(Y, 10)
-    Y_test = to_categorical(Y_test, 10)
+    Y = to_categorical(Y, n_classes)
+    Y_test = to_categorical(Y_test, n_classes)
     return X, Y, X_test, Y_test
 
 
@@ -113,11 +134,14 @@ def train_model(model_id='simple_cnn', dataset='cifar10', load_checkpoint=False)
     print ("Training model {} with dataset {}".format(model_id, dataset))
 
     X, Y, X_test, Y_test = load_data(dataset)
+    n_classes = DATASET_TO_N_CLASSES[dataset]
 
+    date_time_string = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    run_id = "{}_{}".format(model_id, date_time_string)
     # Train using classifier
-    model = load_model(model_id=model_id, load_checkpoint=load_checkpoint, is_training=True)
+    model = load_model(model_id=model_id, n_classes=n_classes, load_checkpoint=load_checkpoint, is_training=True)
     model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=(X_test, Y_test),
-              show_metric=True, batch_size=96, run_id='cifar10_cnn', snapshot_step=100)
+              show_metric=True, batch_size=96, run_id=run_id, snapshot_step=100)
 
 
 def test_model(model_id='simple_cnn', dataset='cifar10'):
@@ -125,8 +149,9 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
 
     X, Y, X_test, Y_test = load_data(dataset)
 
+
     # Test using classifier
-    model = load_model(model_id, load_checkpoint=True, is_training=False)
+    model = load_model(model_id, n_classes=n_classes, load_checkpoint=True, is_training=False)
     pred_train_probs = model.predict(X)
     pred_train = np.argmax(pred_train_probs, axis=1)
     pred_test_probs = model.predict(X_test)

@@ -19,7 +19,7 @@ from tflearn.data_preprocessing import ImagePreprocessing
 from tflearn.data_augmentation import ImageAugmentation
 
 # Convolutional network building
-def build_network():
+def build_network(n_outputdim=10):
     # Real-time data preprocessing
     img_prep = ImagePreprocessing()
     img_prep.add_featurewise_zero_center()
@@ -45,7 +45,7 @@ def build_network():
     network = fully_connected(network, 512, activation='relu')
     network = fully_connected(network, 512, activation='relu')
 
-    network = fully_connected(network, 10, activation='softmax')
+    network = fully_connected(network, n_outputdim, activation='softmax')
     network = regression(network, optimizer='adam',
                          loss='categorical_crossentropy',
                          learning_rate=0.001)
