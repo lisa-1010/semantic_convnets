@@ -152,13 +152,14 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
 
     # Test using classifier
     model = load_model(model_id, n_classes=n_classes, load_checkpoint=True, is_training=False)
-    pred_train_probs = model.predict(X)
-    pred_train = np.argmax(pred_train_probs, axis=1)
+    # pred_train_probs = model.predict(X)
+    # pred_train = np.argmax(pred_train_probs, axis=1)
+    # train_acc = accuracy_score(pred_train, np.argmax(Y, axis=1))
     pred_test_probs = model.predict(X_test)
     pred_test = np.argmax(pred_test_probs, axis=1)
-    train_acc = accuracy_score(pred_train, np.argmax(Y, axis=1))
     test_acc = accuracy_score(pred_test, np.argmax(Y_test, axis=1))
-    print("Train acc: {}\t Test acc: {}".format(train_acc, test_acc))
+    print("Test acc: {}".format( test_acc))
+    # print("Train acc: {}\t Test acc: {}".format(train_acc, test_acc))
 
 
 def read_commandline_args():
