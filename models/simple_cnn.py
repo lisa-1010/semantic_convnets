@@ -20,8 +20,11 @@ from tflearn.data_augmentation import ImageAugmentation
 
 
 # Convolutional network building
-def build_network(n_outputdim=10):
+def build_network(output_dims=None):
+    # outputdims is a list of num_classes
     # Real-time data preprocessing
+
+
     img_prep = ImagePreprocessing()
     img_prep.add_featurewise_zero_center()
     img_prep.add_featurewise_stdnorm()
@@ -41,10 +44,16 @@ def build_network(n_outputdim=10):
     network = max_pool_2d(network, 2)
     network = fully_connected(network, 512, activation='relu')
     network = dropout(network, 0.5)
-    network = fully_connected(network, n_outputdim, activation='softmax')
-    network = regression(network, optimizer='adam',
-                         loss='categorical_crossentropy',
-                         learning_rate=0.001)
 
-    return network
+    networks = []
+    for output_dim in output_dims:
+        cur_network = fully_connected(network, output_dim, activation='softmax', name="FullyConnected_output_dim_{}".format(output_dim))
+        cur_network = regression(cur_network, optimizer='adam',
+                             loss='categorical_crossentropy',
+                             learning_rate=0.001)
+        networks.append(cur_network)
+
+    if len(networks) == 1:
+        return networks[0]
+    return networks
 

@@ -33,7 +33,6 @@ from tflearn.data_utils import shuffle, to_categorical
 from sklearn.metrics import accuracy_score
 import numpy as np
 
-import numpy as np
 from utils import *
 from data_utils import *
 
@@ -47,9 +46,21 @@ DATASET_TO_N_CLASSES = {
     'cifar100_fine': 100
 }
 
-def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False):
+ALL_MODEL_DICTS = {
+    'simple_cnn' : {'network_type': 'simple_cnn'},
+    'simple_cnn_cifar100_joint': {'network_type': 'simple_cnn'},
+    'simple_cnn_cifar100_coarse': {'network_type': 'simple_cnn'},
+    'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn'}
+}
+
+
+
+def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False, checkpoint_model_id=None):
     # should be used for all models
     print ('Loading model...')
+
+    model_dict = ALL_MODEL_DICTS[model_id]
+    network_type = model_dict['network_type']
 
     tensorboard_dir = '../tensorboard_logs/' + model_id + '/'
     checkpoint_path = '../checkpoints/' + model_id + '/'
@@ -63,7 +74,7 @@ def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False)
     check_if_path_exists_or_create(checkpoint_path)
     check_if_path_exists_or_create(best_checkpoint_path)
 
-    network = load_network(model_id=model_id, n_classes=n_classes)
+    network = load_network(network_type=network_type, n_classes=n_classes)
 
     if is_training:
         model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
@@ -72,29 +83,45 @@ def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False)
         model = tflearn.DNN(network)
 
     if load_checkpoint:
-        checkpoint = tf.train.latest_checkpoint(checkpoint_path)  # can be none of no checkpoint exists
-        if checkpoint and os.path.isfile(checkpoint):
-            # model.load(checkpoint, weights_only=True, verbose=True)
-            model.load(checkpoint, verbose=True)
-            print ('Checkpoint loaded.')
+        if checkpoint_model_id:
+            start_checkpoint_path = '../checkpoints/' + checkpoint_model_id + '/'
+            checkpoint = tf.train.latest_checkpoint(start_checkpoint_path)  # can be none of no checkpoint exists
+            if checkpoint and os.path.isfile(checkpoint):
+                def variable_name_map_func(existing_var_op_name):
+                    if 'FullyConnected_output_dim' in existing_var_op_name:
+                        return None
+                    else:
+                        return existing_var_op_name
+                model.load(checkpoint, weights_only=True, verbose=True, variable_name_map=variable_name_map_func)
+                # model.load(checkpoint, verbose=True)
+                print('Checkpoint loaded.')
+            else:
+                print('No checkpoint found. ')
         else:
-            print ('No checkpoint found. ')
+            start_checkpoint_path = checkpoint_path
+            checkpoint = tf.train.latest_checkpoint(start_checkpoint_path)  # can be none of no checkpoint exists
+            if checkpoint and os.path.isfile(checkpoint):
+                model.load(checkpoint, verbose=True)
+                # model.load(checkpoint, verbose=True)
+                print ('Checkpoint loaded.')
+            else:
+                print ('No checkpoint found. ')
 
     print ('Model loaded.')
     return model
 
 
-def load_network(model_id='simple_cnn', n_classes=10):
+def load_network(network_type='simple_cnn', n_classes=10):
     network = None
 
-    if model_id == 'simple_cnn':
-        network = simple_cnn.build_network(n_outputdim=n_classes)
-    elif model_id == 'lenet_cnn':
-        network = lenet_cnn.build_network(n_outputdim=n_classes)
-    elif model_id == 'lenet_small_cnn':
-        network = lenet_small_cnn.build_network(n_outputdim=n_classes)
+    if network_type == 'simple_cnn':
+        network = simple_cnn.build_network([n_classes])
+    elif network_type == 'lenet_cnn':
+        network = lenet_cnn.build_network([n_classes])
+    elif network_type == 'lenet_small_cnn':
+        network = lenet_small_cnn.build_network([n_classes])
     else:
-        print("Model {} not found. ".format(model_id))
+        print("Model {} not found. ".format(network_type))
         sys.exit()
     return network
 
@@ -129,17 +156,18 @@ def load_data(dataset='cifar10'):
     return X, Y, X_test, Y_test
 
 
-def train_model(model_id='simple_cnn', dataset='cifar10', load_checkpoint=False):
+def train_model(model_id='simple_cnn', dataset='cifar10', load_checkpoint=False, checkpoint_model_id=None):
 
     print ("Training model {} with dataset {}".format(model_id, dataset))
 
-    X, Y, X_test, Y_test = load_data(dataset)
     n_classes = DATASET_TO_N_CLASSES[dataset]
 
     date_time_string = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
     run_id = "{}_{}".format(model_id, date_time_string)
     # Train using classifier
-    model = load_model(model_id=model_id, n_classes=n_classes, load_checkpoint=load_checkpoint, is_training=True)
+    model = load_model(model_id=model_id, n_classes=n_classes, load_checkpoint=load_checkpoint, is_training=True, checkpoint_model_id=checkpoint_model_id)
+
+    X, Y, X_test, Y_test = load_data(dataset)
     model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=(X_test, Y_test),
               show_metric=True, batch_size=96, run_id=run_id, snapshot_step=100)
 
@@ -164,16 +192,16 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
 
 def read_commandline_args():
     def usage():
-        print("Usage: python pipeline.py -t <train_or_test_mode> -m <model_id> -d <dataset>")
+        print("Usage: python pipeline.py -t <train_or_test_mode> -m <model_id> -d <dataset> -c <ckpt_model_id>")
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"ht:m:d:", ["help", "train_or_test_mode", "model_id", "dataset"])
+        opts, args = getopt.getopt(sys.argv[1:],"ht:m:d:c:", ["help", "train_or_test_mode", "model_id", "dataset", "ckpt_model_id"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print (str(err))  # will print something like "option -a not recognized"
         usage()
         sys.exit(2)
 
-    mode, model_id, dataset = None, None, None
+    mode, model_id, dataset, checkpoint_model_id = None, None, None, None
     for o, a in opts:
         if o in ("-h", "--help"):
             usage()
@@ -184,6 +212,8 @@ def read_commandline_args():
             model_id = a
         elif o in ("-d", "--dataset"):
             dataset = a
+        elif o in ("-c", "--ckpt_model_id"):
+            checkpoint_model_id = a
         else:
             assert False, "unhandled option"
 
@@ -196,13 +226,17 @@ def read_commandline_args():
 
     if dataset == None:
         dataset = 'cifar10'
-    return mode, model_id, dataset
+
+    return mode, model_id, dataset, checkpoint_model_id
+
+
+
 
 
 def main():
-    mode, model_id, dataset = read_commandline_args()
+    mode, model_id, dataset, checkpoint_model_id = read_commandline_args()
     if mode == 'train':
-        train_model(model_id, dataset, load_checkpoint=True)
+        train_model(model_id, dataset, load_checkpoint=True, checkpoint_model_id=checkpoint_model_id)
     elif mode == 'test':
         test_model(model_id, dataset)
 
