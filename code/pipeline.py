@@ -51,9 +51,25 @@ ALL_MODEL_DICTS = {
     'simple_cnn': {'network_type': 'simple_cnn', 'dataset': 'cifar10'},
     'simple_cnn_cifar100_joint': {'network_type': 'simple_cnn', 'dataset': None},  # TODO joint
     'simple_cnn_cifar100_coarse': {'network_type': 'simple_cnn', 'dataset': 'cifar100_coarse'},
-    'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn', 'dataset': 'cifar100_fine'}
+    'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn', 'dataset': 'cifar100_fine'},
+    'simple_cnn_extended1_cifar100_fine': {'network_type': 'simple_cnn_extended1', 'dataset': 'cifar100_fine'}
 }
 
+def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
+    def variable_name_map_func(existing_var_op_name):
+        if not is_training:  # In test, always preload ALL weights
+            return existing_var_op_name
+        if checkpoint_model_id == model_id:  # If we're preloading the same model, then obviously preload ALL weights!
+            return existing_var_op_name
+
+        # Otherwise, we're in training and we can simply
+        print(existing_var_op_name)
+        if 'unique/' in existing_var_op_name:
+            return None
+        else:
+            return existing_var_op_name
+
+    return variable_name_map_func
 
 def load_model(model_id, n_classes=10, is_training=False, checkpoint_model_id=None):
     # should be used for all models
@@ -86,15 +102,7 @@ def load_model(model_id, n_classes=10, is_training=False, checkpoint_model_id=No
         start_checkpoint_path = '../checkpoints/' + checkpoint_model_id + '/'
         checkpoint = tf.train.latest_checkpoint(start_checkpoint_path)  # can be none of no checkpoint exists
         if checkpoint and os.path.isfile(checkpoint):
-            def variable_name_map_func(existing_var_op_name):
-                if not is_training: # In test, always map variable names correctly
-                    return existing_var_op_name
-                if checkpoint_model_id == model_id: # If we're preloading the same model, then obviously return all weights!
-                    return existing_var_op_name
-                if 'FullyConnected_output_dim' in existing_var_op_name:
-                    return None
-                else:
-                    return existing_var_op_name
+            variable_name_map_func = get_weights_to_preload_function(model_id, checkpoint_model_id, is_training)
             model.load(checkpoint, weights_only=True, verbose=True, variable_name_map=variable_name_map_func)
             # model.load(checkpoint, verbose=True)
             print('Checkpoint loaded.')
@@ -114,6 +122,8 @@ def load_network(network_type='simple_cnn', n_classes=10):
         network = lenet_cnn.build_network([n_classes])
     elif network_type == 'lenet_small_cnn':
         network = lenet_small_cnn.build_network([n_classes])
+    elif network_type == 'simple_cnn_extended1':
+        network = simple_cnn_extended1.build_network([n_classes])
     else:
         print("Model {} not found. ".format(network_type))
         sys.exit()
@@ -173,7 +183,7 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
     n_classes = DATASET_TO_N_CLASSES[dataset]
 
     # Test using classifier
-    model = load_model(model_id, n_classes=n_classes, checkpoint_model_id=model_id, is_training=False) # TODO make sure to load final layer correctly for testing purposes
+    model = load_model(model_id, n_classes=n_classes, checkpoint_model_id=model_id, is_training=False)
     # pred_train_probs = model.predict(X)
     # pred_train = np.argmax(pred_train_probs, axis=1)
     # train_acc = accuracy_score(pred_train, np.argmax(Y, axis=1))
