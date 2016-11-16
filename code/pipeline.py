@@ -46,16 +46,16 @@ DATASET_TO_N_CLASSES = {
     'cifar100_fine': 100
 }
 
+
 ALL_MODEL_DICTS = {
-    'simple_cnn' : {'network_type': 'simple_cnn'},
-    'simple_cnn_cifar100_joint': {'network_type': 'simple_cnn'},
-    'simple_cnn_cifar100_coarse': {'network_type': 'simple_cnn'},
-    'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn'}
+    'simple_cnn': {'network_type': 'simple_cnn', 'dataset': 'cifar10'},
+    'simple_cnn_cifar100_joint': {'network_type': 'simple_cnn', 'dataset': None},  # TODO joint
+    'simple_cnn_cifar100_coarse': {'network_type': 'simple_cnn', 'dataset': 'cifar100_coarse'},
+    'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn', 'dataset': 'cifar100_fine'}
 }
 
 
-
-def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False, checkpoint_model_id=None):
+def load_model(model_id, n_classes=10, is_training=False, checkpoint_model_id=None):
     # should be used for all models
     print ('Loading model...')
 
@@ -82,30 +82,24 @@ def load_model(model_id, n_classes=10, load_checkpoint=False, is_training=False,
     else:
         model = tflearn.DNN(network)
 
-    if load_checkpoint:
-        if checkpoint_model_id:
-            start_checkpoint_path = '../checkpoints/' + checkpoint_model_id + '/'
-            checkpoint = tf.train.latest_checkpoint(start_checkpoint_path)  # can be none of no checkpoint exists
-            if checkpoint and os.path.isfile(checkpoint):
-                def variable_name_map_func(existing_var_op_name):
-                    if 'FullyConnected_output_dim' in existing_var_op_name:
-                        return None
-                    else:
-                        return existing_var_op_name
-                model.load(checkpoint, weights_only=True, verbose=True, variable_name_map=variable_name_map_func)
-                # model.load(checkpoint, verbose=True)
-                print('Checkpoint loaded.')
-            else:
-                print('No checkpoint found. ')
+    if checkpoint_model_id:
+        start_checkpoint_path = '../checkpoints/' + checkpoint_model_id + '/'
+        checkpoint = tf.train.latest_checkpoint(start_checkpoint_path)  # can be none of no checkpoint exists
+        if checkpoint and os.path.isfile(checkpoint):
+            def variable_name_map_func(existing_var_op_name):
+                if not is_training: # In test, always map variable names correctly
+                    return existing_var_op_name
+                if checkpoint_model_id == model_id: # If we're preloading the same model, then obviously return all weights!
+                    return existing_var_op_name
+                if 'FullyConnected_output_dim' in existing_var_op_name:
+                    return None
+                else:
+                    return existing_var_op_name
+            model.load(checkpoint, weights_only=True, verbose=True, variable_name_map=variable_name_map_func)
+            # model.load(checkpoint, verbose=True)
+            print('Checkpoint loaded.')
         else:
-            start_checkpoint_path = checkpoint_path
-            checkpoint = tf.train.latest_checkpoint(start_checkpoint_path)  # can be none of no checkpoint exists
-            if checkpoint and os.path.isfile(checkpoint):
-                model.load(checkpoint, verbose=True)
-                # model.load(checkpoint, verbose=True)
-                print ('Checkpoint loaded.')
-            else:
-                print ('No checkpoint found. ')
+            print('No checkpoint found. ')
 
     print ('Model loaded.')
     return model
@@ -156,7 +150,7 @@ def load_data(dataset='cifar10'):
     return X, Y, X_test, Y_test
 
 
-def train_model(model_id='simple_cnn', dataset='cifar10', load_checkpoint=False, checkpoint_model_id=None):
+def train_model(model_id='simple_cnn', dataset='cifar10', checkpoint_model_id=None):
 
     print ("Training model {} with dataset {}".format(model_id, dataset))
 
@@ -165,7 +159,7 @@ def train_model(model_id='simple_cnn', dataset='cifar10', load_checkpoint=False,
     date_time_string = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
     run_id = "{}_{}".format(model_id, date_time_string)
     # Train using classifier
-    model = load_model(model_id=model_id, n_classes=n_classes, load_checkpoint=load_checkpoint, is_training=True, checkpoint_model_id=checkpoint_model_id)
+    model = load_model(model_id=model_id, n_classes=n_classes, is_training=True, checkpoint_model_id=checkpoint_model_id)
 
     X, Y, X_test, Y_test = load_data(dataset)
     model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=(X_test, Y_test),
@@ -179,7 +173,7 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
     n_classes = DATASET_TO_N_CLASSES[dataset]
 
     # Test using classifier
-    model = load_model(model_id, n_classes=n_classes, load_checkpoint=True, is_training=False)
+    model = load_model(model_id, n_classes=n_classes, checkpoint_model_id=model_id, is_training=False) # TODO make sure to load final layer correctly for testing purposes
     # pred_train_probs = model.predict(X)
     # pred_train = np.argmax(pred_train_probs, axis=1)
     # train_acc = accuracy_score(pred_train, np.argmax(Y, axis=1))
@@ -192,16 +186,16 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
 
 def read_commandline_args():
     def usage():
-        print("Usage: python pipeline.py -t <train_or_test_mode> -m <model_id> -d <dataset> -c <ckpt_model_id>")
+        print("Usage: python pipeline.py -t <train_or_test_mode> -m <model_id> -c <ckpt_model_id>")
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"ht:m:d:c:", ["help", "train_or_test_mode", "model_id", "dataset", "ckpt_model_id"])
+        opts, args = getopt.getopt(sys.argv[1:],"ht:m:d:c:", ["help", "train_or_test_mode", "model_id", "ckpt_model_id"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print (str(err))  # will print something like "option -a not recognized"
         usage()
         sys.exit(2)
 
-    mode, model_id, dataset, checkpoint_model_id = None, None, None, None
+    mode, model_id, checkpoint_model_id = None, None, None
     for o, a in opts:
         if o in ("-h", "--help"):
             usage()
@@ -210,8 +204,6 @@ def read_commandline_args():
             mode = a
         elif o in ("-m", "--model_id"):
             model_id = a
-        elif o in ("-d", "--dataset"):
-            dataset = a
         elif o in ("-c", "--ckpt_model_id"):
             checkpoint_model_id = a
         else:
@@ -224,19 +216,18 @@ def read_commandline_args():
     if model_id == None:
         model_id = 'simple_cnn'
 
-    if dataset == None:
-        dataset = 'cifar10'
-
-    return mode, model_id, dataset, checkpoint_model_id
+    return mode, model_id, checkpoint_model_id
 
 
 
 
 
 def main():
-    mode, model_id, dataset, checkpoint_model_id = read_commandline_args()
+    mode, model_id, checkpoint_model_id = read_commandline_args()
+
+    dataset = ALL_MODEL_DICTS[model_id]["dataset"]
     if mode == 'train':
-        train_model(model_id, dataset, load_checkpoint=True, checkpoint_model_id=checkpoint_model_id)
+        train_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)
     elif mode == 'test':
         test_model(model_id, dataset)
 
