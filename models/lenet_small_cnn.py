@@ -18,8 +18,9 @@ from tflearn.layers.estimator import regression
 from tflearn.data_preprocessing import ImagePreprocessing
 from tflearn.data_augmentation import ImageAugmentation
 
+
 # Convolutional network building
-def build_network(n_outputdim=10):
+def build_network(output_dims=None):
     # Real-time data preprocessing
     img_prep = ImagePreprocessing()
     img_prep.add_featurewise_zero_center()
@@ -45,10 +46,18 @@ def build_network(n_outputdim=10):
     network = fully_connected(network, 512, activation='relu')
     network = fully_connected(network, 512, activation='relu')
 
-    network = fully_connected(network, n_outputdim, activation='softmax')
-    network = regression(network, optimizer='adam',
-                         loss='categorical_crossentropy',
-                         learning_rate=0.001)
+    networks = []
+    for output_dim in output_dims:
+        cur_network = fully_connected(network, output_dim, activation='softmax', name="unique/FullyConnected_output_dim_{}".format(output_dim))
+        cur_network = regression(cur_network, optimizer='adam',
+                             loss='categorical_crossentropy',
+                             learning_rate=0.001)
 
-    return network
+        networks.append(cur_network)
+
+    if len(networks) == 1:
+        return networks[0]
+    return networks
+
+
 

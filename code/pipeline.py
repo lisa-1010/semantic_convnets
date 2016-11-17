@@ -52,7 +52,11 @@ ALL_MODEL_DICTS = {
     'simple_cnn_cifar100_joint': {'network_type': 'simple_cnn', 'dataset': None},  # TODO joint
     'simple_cnn_cifar100_coarse': {'network_type': 'simple_cnn', 'dataset': 'cifar100_coarse'},
     'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn', 'dataset': 'cifar100_fine'},
-    'simple_cnn_extended1_cifar100_fine': {'network_type': 'simple_cnn_extended1', 'dataset': 'cifar100_fine'}
+    'simple_cnn_extended1_cifar100_fine': {'network_type': 'simple_cnn_extended1', 'dataset': 'cifar100_fine'},
+
+    'lenet_small_cnn_cifar100_coarse': {'network_type': 'lenet_small_cnn', 'dataset': 'cifar100_coarse'},
+    'lenet_cnn_cifar100_coarse': {'network_type': 'lenet_cnn', 'dataset': 'cifar100_coarse'},
+    'vggnet_cnn_cifar100_coarse': {'network_type': 'vggnet_cnn', 'dataset': 'cifar100_coarse'},
 }
 
 def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
@@ -122,6 +126,8 @@ def load_network(network_type='simple_cnn', n_classes=10):
         network = lenet_cnn.build_network([n_classes])
     elif network_type == 'lenet_small_cnn':
         network = lenet_small_cnn.build_network([n_classes])
+    elif network_type == 'vggnet_cnn':
+        network = vggnet_cnn.build_network([n_classes])
     elif network_type == 'simple_cnn_extended1':
         network = simple_cnn_extended1.build_network([n_classes])
     else:

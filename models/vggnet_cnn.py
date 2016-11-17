@@ -20,7 +20,7 @@ from tflearn.data_augmentation import ImageAugmentation
 
 
 # Convolutional network building
-def build_network(n_outputdim=10):
+def build_network(output_dims=None):
     # Real-time data preprocessing
     img_prep = ImagePreprocessing()
     img_prep.add_featurewise_zero_center()
@@ -35,25 +35,32 @@ def build_network(n_outputdim=10):
                          data_preprocessing=img_prep,
                          data_augmentation=img_aug)
     network = conv_2d(network, 64, 3, activation='relu')
-    network = conv_2d(network, 64, 3, activation='relu')
     network = max_pool_2d(network, 2)
-    network = conv_2d(network, 128, 3, activation='relu')
     network = conv_2d(network, 128, 3, activation='relu')
     network = max_pool_2d(network, 2)
     network = conv_2d(network, 256, 3, activation='relu')
     network = conv_2d(network, 256, 3, activation='relu')
     network = max_pool_2d(network, 2)
 
-    network = fully_connected(network, 512, activation='relu')
-    network = dropout(network, 0.5)
+    # minified version of VGG ... smallest 11 layer net actually has 4 more 512 CONV layers
 
-    network = fully_connected(network, 512, activation='relu')
-    network = dropout(network, 0.5)
+    network = fully_connected(network, 4096, activation='relu')
+    network = fully_connected(network, 4096, activation='relu')
+    network = fully_connected(network, 1000, activation='relu')
 
-    network = fully_connected(network, n_outputdim, activation='softmax')
-    network = regression(network, optimizer='adam',
-                         loss='categorical_crossentropy',
-                         learning_rate=0.001)
 
-    return network
+    networks = []
+    for output_dim in output_dims:
+        cur_network = fully_connected(network, output_dim, activation='softmax', name="unique/FullyConnected_output_dim_{}".format(output_dim))
+        cur_network = regression(cur_network, optimizer='adam',
+                             loss='categorical_crossentropy',
+                             learning_rate=0.001)
+
+        networks.append(cur_network)
+
+    if len(networks) == 1:
+        return networks[0]
+    return networks
+
+
 
