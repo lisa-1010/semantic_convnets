@@ -4,7 +4,10 @@
 
 Tensorflow AMI id: ami-133ae673
 
-(1) Spin up spot instance for specified time period. ### Note the ip address here: 35.162.225.37 ### 
+(1) Spin up spot instance for specified time period.
+
+### Note the ip address here: 35.161.202.68 ###
+
 (2) SSH into the instance (don't forget to add security groups to allow ssh)
 
 ssh -i (path to pem file) ubuntu@(ip address)
@@ -12,10 +15,10 @@ ssh -i (path to pem file) ubuntu@(ip address)
 (3) Install the following:
 
 pip install tflearn
-sudo pip install git+https://github.com/tflearn/tflearn.git
 sudo pip install h5py
 pip install --upgrade pip 
 sudo pip install sklearn
+sudo pip install git+https://github.com/tflearn/tflearn.git
 
 (4) Clone repo and copy over data files
 

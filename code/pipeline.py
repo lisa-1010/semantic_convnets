@@ -54,9 +54,11 @@ ALL_MODEL_DICTS = {
     'simple_cnn_cifar100_fine': {'network_type': 'simple_cnn', 'dataset': 'cifar100_fine'},
     'simple_cnn_extended1_cifar100_fine': {'network_type': 'simple_cnn_extended1', 'dataset': 'cifar100_fine'},
 
-    'lenet_small_cnn_cifar100_coarse': {'network_type': 'lenet_small_cnn', 'dataset': 'cifar100_coarse'},
     'lenet_cnn_cifar100_coarse': {'network_type': 'lenet_cnn', 'dataset': 'cifar100_coarse'},
     'vggnet_cnn_cifar100_coarse': {'network_type': 'vggnet_cnn', 'dataset': 'cifar100_coarse'},
+
+    'lenet_cnn_cifar100_fine': {'network_type': 'lenet_cnn', 'dataset': 'cifar100_fine'},
+    'vggnet_cnn_cifar100_fine': {'network_type': 'vggnet_cnn', 'dataset': 'cifar100_fine'},
 }
 
 def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
