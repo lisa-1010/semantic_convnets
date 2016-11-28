@@ -47,11 +47,14 @@ def build_network(output_dims=None):
 
     networks = []
     for output_dim in output_dims:
-        cur_network = fully_connected(network, output_dim, activation='softmax', name="unique/FullyConnected_output_dim_{}".format(output_dim))
+        cur_network = fully_connected(network, output_dim, activation='softmax', name="unique_FullyConnected_output_dim_{}".format(output_dim))
         cur_network = regression(cur_network, optimizer='adam',
                              loss='categorical_crossentropy',
                              learning_rate=0.001)
         networks.append(cur_network)
+
+    import tensorflow as tf
+    tf.nn.sparse_softmax_cross_entropy_with_logits
 
     if len(networks) == 1:
         return networks[0]

@@ -47,12 +47,12 @@ def build_network(output_dims=None):
     networks = []
     for i, output_dim in enumerate(output_dims):
         for j in xrange(i):
-            network = conv_2d(network, 64, 3, activation='relu', name="unique/Conv2D_{}".format(3+2*j))
-            network = conv_2d(network, 64, 3, activation='relu', name="unique/Conv2D_{}".format(3+2*j+1))
+            network = conv_2d(network, 64, 3, activation='relu', name="unique_Conv2D_{}".format(3+2*j))
+            network = conv_2d(network, 64, 3, activation='relu', name="unique_Conv2D_{}".format(3+2*j+1))
             network = max_pool_2d(network, 2)
-        network = fully_connected(network, 512, activation='relu', name="unique/FullyConnected")
+        network = fully_connected(network, 512, activation='relu', name="unique_FullyConnected")
         network = dropout(network, 0.5)
-        cur_network = fully_connected(network, output_dim, activation='softmax', name="unique/FullyConnected_1")
+        cur_network = fully_connected(network, output_dim, activation='softmax', name="unique_FullyConnected_1")
         cur_network = regression(cur_network, optimizer='adam',
                              loss='categorical_crossentropy',
                              learning_rate=0.001)

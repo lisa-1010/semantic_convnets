@@ -6,22 +6,19 @@ Tensorflow AMI id: ami-133ae673
 
 (1) Spin up spot instance for specified time period.
 
-### Note the ip address here: 35.163.93.248 ###
+### Note the ip address here: 35.163.7.192 ###
 
 (2) SSH into the instance (don't forget to add security groups to allow ssh)
 
 ssh -i (path to pem file) ubuntu@(ip address)
 
-(3) Install the following:
-
-sudo pip install --upgrade pip 
-sudo pip install h5py
-sudo pip install sklearn
-sudo pip install git+https://github.com/tflearn/tflearn.git
-
-(4) Clone repo and copy over data files
+(3) Clone repo and copy over data files
 
 git clone https://github.com/lisa-1010/semantic_convnets
+
+(4) Run
+
+source setup.sh
 
 (5) Copy over data
 
