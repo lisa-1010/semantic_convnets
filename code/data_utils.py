@@ -19,6 +19,8 @@ from numpy import append, array, int8, uint8, zeros, int32, float32
 import cPickle as pickle
 from scipy.misc import imread
 
+from collections import defaultdict
+
 
 CIFAR10_DIR = '../data/cifar-10-batches-py'
 CIFAR100_DIR = '../data/cifar-100-python'
@@ -69,6 +71,89 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset=
     y_test = y_test[mask]
 
     return X_train, y_train, X_val, y_val, X_test, y_test
+
+
+
+def load_cifar_train_test(dataset='cifar10'):
+    """
+    WARNING: Needs to be run from code directory, otherwise relative path
+    will not work.
+    Load the CIFAR-10 or CIFAR-100 dataset from disk.
+    Returns train, validation and test sets.
+    Note that num_training, num_validation and num_test have to be > 0.
+
+    Important note for cifar100:
+    Since cifar100 images have both fine labels (100) and coarse labels (20 superclasses),
+    the returned y matrix has shape (num_samples, 2), where the first column corresponds to fine labels, and
+    second column corresponds to coarse labels.
+    Hence:
+    y_fine = y[:,0]
+    y_coarse = y[:,1]
+    """
+    # Load the raw CIFAR-10 data
+    assert (dataset in ['cifar10', 'cifar100']), "dataset has to be either cifar10 or cifar100. "
+    if dataset == 'cifar10':
+        X_train, y_train, X_test, y_test = _load_cifar10(CIFAR10_DIR)
+    elif dataset == 'cifar100':
+        X_train, y_fine_train, y_coarse_train, X_test, y_fine_test, y_coarse_test = _load_cifar100(CIFAR100_DIR)
+        y_train = np.stack((y_fine_train, y_coarse_train)).swapaxes(0,1)
+        y_test = np.stack((y_fine_test, y_coarse_test)).swapaxes(0,1)
+
+    return X_train, y_train, X_test, y_test
+
+
+
+def load_cifar_pyramid():
+    dataset = 'cifar100'
+    X_train, y_train, X_test, y_test = load_cifar_train_test(dataset)
+    coarse_to_fine_map = load_coarse_to_fine_map()
+
+    fine_labels_joint = set()
+    fine_labels_gate = set()
+    fine_labels_only_test = set()
+
+    for coarse_label, fine_labels in coarse_to_fine_map.iteritems():
+        fine_labels_joint.add(fine_labels[:2])
+        fine_labels_gate.add(fine_labels[:4])
+        fine_labels_only_test.add(fine_labels[4])
+
+    X_train_joint, y_train_joint = [], []
+
+    X_train_gate, y_train_gate = [], []
+
+    fine_or_coarse_train_gate = [] # a 0 indicates it should predict fine, a 1 indicate it should be predict coarse.
+
+    for i in xrange(X_train.shape[0]):
+        fine_label = y_train[i, 0]
+        if fine_label in fine_labels_joint:
+            X_train_joint.append(X_train[i])
+            y_train_joint.append(y_train[i])
+        if fine_label in fine_labels_gate:
+            X_train_gate.append(X_train[i])
+            y_train_gate.append(y_train[i])
+            if fine_label in fine_labels_joint:
+                fine_or_coarse_train_gate.append(0)
+            else:
+                fine_or_coarse_train_gate.append(1)
+
+    X_train_joint = np.array(X_train_joint)
+    y_train_joint = np.array(y_train_joint) # shape (num_samples, 2)
+
+    X_train_gate = np.array(X_train_gate)
+    y_train_gate = np.array(y_train_gate) # shape (num_samples, 2)
+    fine_or_coarse_train_gate = np.array(fine_or_coarse_train_gate)
+
+    fine_or_coarse_test = []
+    for i in xrange(X_test.shape[0]):
+        fine_label = y_test[i,0]
+        if fine_label in fine_labels_joint: # if label of current sample is one of the fine classes we trained on.
+            fine_or_coarse_test.append(0)
+        else:
+            fine_or_coarse_test.append(1)
+
+    fine_or_coarse_test = np.array(fine_or_coarse_test)
+
+    return X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, fine_or_coarse_test
 
 
 def _load_cifar100(ROOT):
@@ -155,22 +240,53 @@ def load_cifar100_label_names(label_type='all'):
             return coarse_label_names
 
 
+def load_coarse_to_fine_map():
+    coarse_to_fine_map = pickle.load(open('coarse_to_fine_map.pickle', 'rb+'))
+    return coarse_to_fine_map
+
+
+def create_coarse_to_fine_map():
+    coarse_to_fine_map = defaultdict(set)
+    X_train, y_train, X_test, y_test = load_cifar_train_test(dataset='cifar100')
+    fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
+
+    fine_y_train = y_train[:, 0]
+    coarse_y_train = y_train[:, 1]
+
+    for i in xrange(y_train.shape[0]):
+        coarse_label = coarse_label_names[coarse_y_train[i]]
+        fine_label = fine_label_names[fine_y_train[i]]
+
+        if fine_label not in coarse_to_fine_map[coarse_label]:
+            coarse_to_fine_map[coarse_label].add(fine_label)
+
+    for k in coarse_to_fine_map:
+        coarse_to_fine_map[k] = sorted(list(coarse_to_fine_map[k]))
+
+    print coarse_to_fine_map
+    pickle.dump(coarse_to_fine_map, open('coarse_to_fine_map.pickle', 'wb+'))
+    return coarse_to_fine_map
+
+
 if __name__=='__main__':
-    X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1, num_test=1000, dataset='cifar10')
-    print 'X_train shape: {}'.format(X_train.shape)
-    print 'y_train shape: {}'.format(y_train.shape)
-    print 'X_val shape: {}'.format(X_val.shape)
-    print 'X_test shape: {}'.format(X_test.shape)
+    # X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1, num_test=1000, dataset='cifar10')
+    # print 'X_train shape: {}'.format(X_train.shape)
+    # print 'y_train shape: {}'.format(y_train.shape)
+    # print 'X_val shape: {}'.format(X_val.shape)
+    # print 'X_test shape: {}'.format(X_test.shape)
+    #
+    # X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
+    #                                                             dataset='cifar100')
+    # print 'X_train shape: {}'.format(X_train.shape)
+    # print 'y_train shape: {}'.format(y_train.shape)
+    # print 'X_val shape: {}'.format(X_val.shape)
+    # print 'X_test shape: {}'.format(X_test.shape)
+    #
+    # label_names = load_cifar10_label_names()
+    # print label_names
+    # fine_label_names, coarse_label_names = load_cifar100_label_names()
+    # print fine_label_names
+    # print coarse_label_names
 
-    X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(num_training=49000, num_validation=1000, num_test=1000,
-                                                                dataset='cifar100')
-    print 'X_train shape: {}'.format(X_train.shape)
-    print 'y_train shape: {}'.format(y_train.shape)
-    print 'X_val shape: {}'.format(X_val.shape)
-    print 'X_test shape: {}'.format(X_test.shape)
 
-    label_names = load_cifar10_label_names()
-    print label_names
-    fine_label_names, coarse_label_names = load_cifar100_label_names()
-    print fine_label_names
-    print coarse_label_names
+    coarse_to_fine_map = create_coarse_to_fine_map()
