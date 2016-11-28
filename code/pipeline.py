@@ -59,6 +59,8 @@ ALL_MODEL_DICTS = {
 
     'lenet_cnn_cifar100_fine': {'network_type': 'lenet_cnn', 'dataset': 'cifar100_fine'},
     'vggnet_cnn_cifar100_fine': {'network_type': 'vggnet_cnn', 'dataset': 'cifar100_fine'},
+
+    'pyramid_cifar100': {'network_type': 'pyramid', 'dataset': 'cifar100_joint'}
 }
 
 def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
@@ -77,7 +79,7 @@ def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
 
     return variable_name_map_func
 
-def load_model(model_id, n_classes=10, is_training=False, checkpoint_model_id=None):
+def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=False, checkpoint_model_id=None):
     # should be used for all models
     print ('Loading model...')
 
@@ -96,7 +98,7 @@ def load_model(model_id, n_classes=10, is_training=False, checkpoint_model_id=No
     check_if_path_exists_or_create(checkpoint_path)
     check_if_path_exists_or_create(best_checkpoint_path)
 
-    network = load_network(network_type=network_type, n_classes=n_classes)
+    network = load_network(network_type=network_type, n_classes=n_classes, pyramid_output_dims=pyramid_output_dims)
 
     if is_training:
         model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
@@ -119,7 +121,7 @@ def load_model(model_id, n_classes=10, is_training=False, checkpoint_model_id=No
     return model
 
 
-def load_network(network_type='simple_cnn', n_classes=10):
+def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=None):
     network = None
 
     if network_type == 'simple_cnn':
@@ -132,6 +134,8 @@ def load_network(network_type='simple_cnn', n_classes=10):
         network = vggnet_cnn.build_network([n_classes])
     elif network_type == 'simple_cnn_extended1':
         network = simple_cnn_extended1.build_network([n_classes])
+    elif network_type == 'pyramid':
+        network = joint_pyramid_cnn.build_network(pyramid_output_dims)
     else:
         print("Model {} not found. ".format(network_type))
         sys.exit()
@@ -160,12 +164,27 @@ def load_data(dataset='cifar10'):
     else:
         print ("Dataset {} not found. ".format(dataset))
         sys.exit()
-
     n_classes = DATASET_TO_N_CLASSES[dataset]
     X, Y = shuffle(X, Y)
     Y = to_categorical(Y, n_classes)
     Y_test = to_categorical(Y_test, n_classes)
     return X, Y, X_test, Y_test
+
+
+def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
+    if dataset == 'cifar100_joint':
+        X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
+        fine_or_coarse_test = load_cifar_pyramid()
+    else:
+        print("Dataset {} not found. ".format(dataset))
+    if return_subset == 'all':
+        return X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, fine_or_coarse_test
+    elif return_subset == 'joint_only':
+        return X_train_joint, y_train_joint
+    elif return_subset == 'gate_only':
+        return X_train_gate, y_train_gate, fine_or_coarse_train_gate
+    elif return_subset == 'test_only':
+        return X_test, y_test, fine_or_coarse_test
 
 
 def train_model(model_id='simple_cnn', dataset='cifar10', checkpoint_model_id=None):
@@ -180,8 +199,29 @@ def train_model(model_id='simple_cnn', dataset='cifar10', checkpoint_model_id=No
     model = load_model(model_id=model_id, n_classes=n_classes, is_training=True, checkpoint_model_id=checkpoint_model_id)
 
     X, Y, X_test, Y_test = load_data(dataset)
-    model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=(X_test, Y_test),
-              show_metric=True, batch_size=96, run_id=run_id, snapshot_step=100)
+
+    model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=0.1,
+              show_metric=True, batch_size=128, run_id=run_id, snapshot_step=100)
+
+
+def train_pyramid_model(model_id='pyramid_cifar100', dataset='cifar100_joint',  checkpoint_model_id=None):
+    coarse_dim = 20
+    fine_dim = 100
+    X_train_joint, y_train_joint = load_data_pyramid(dataset=dataset, return_subset='joint_only')
+
+    X_train_joint, y_train_joint = shuffle(X_train_joint, y_train_joint)
+    y_train_fine, y_train_coarse = y_train_joint[:, 0], y_train_joint[:, 1]
+    y_train_fine, y_train_coarse = to_categorical(y_train_fine, fine_dim), to_categorical(y_train_coarse, coarse_dim)
+
+    y_train_joint = np.concatenate((y_train_coarse, y_train_fine), axis=1)
+
+    model = load_model(model_id, pyramid_output_dims=[coarse_dim, fine_dim], is_training=True, checkpoint_model_id=checkpoint_model_id)
+
+    date_time_string = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    run_id = "{}_{}".format(model_id, date_time_string)
+
+    model.fit(X_train_joint, y_train_joint, n_epoch=50, shuffle=True, validation_set=0.1,
+              show_metric=True, batch_size=128, run_id=run_id, snapshot_step=100)
 
 
 def test_model(model_id='simple_cnn', dataset='cifar10'):
@@ -237,15 +277,15 @@ def read_commandline_args():
     return mode, model_id, checkpoint_model_id
 
 
-
-
-
 def main():
     mode, model_id, checkpoint_model_id = read_commandline_args()
 
     dataset = ALL_MODEL_DICTS[model_id]["dataset"]
     if mode == 'train':
-        train_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)
+        if model_id == 'pyramid_cifar100':
+            train_pyramid_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)
+        else:
+            train_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)
     elif mode == 'test':
         test_model(model_id, dataset)
 

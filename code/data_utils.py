@@ -106,16 +106,20 @@ def load_cifar_train_test(dataset='cifar10'):
 def load_cifar_pyramid():
     dataset = 'cifar100'
     X_train, y_train, X_test, y_test = load_cifar_train_test(dataset)
+
     coarse_to_fine_map = load_coarse_to_fine_map()
 
+    fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
     fine_labels_joint = set()
     fine_labels_gate = set()
     fine_labels_only_test = set()
 
     for coarse_label, fine_labels in coarse_to_fine_map.iteritems():
-        fine_labels_joint.add(fine_labels[:2])
-        fine_labels_gate.add(fine_labels[:4])
-        fine_labels_only_test.add(fine_labels[4])
+        fine_labels_joint.update(set(fine_labels[:2]))
+        fine_labels_gate.update(set(fine_labels[:4]))
+        fine_labels_only_test.update(set(fine_labels[4]))
+
+
 
     X_train_joint, y_train_joint = [], []
 
@@ -124,7 +128,7 @@ def load_cifar_pyramid():
     fine_or_coarse_train_gate = [] # a 0 indicates it should predict fine, a 1 indicate it should be predict coarse.
 
     for i in xrange(X_train.shape[0]):
-        fine_label = y_train[i, 0]
+        fine_label = fine_label_names[y_train[i, 0]]
         if fine_label in fine_labels_joint:
             X_train_joint.append(X_train[i])
             y_train_joint.append(y_train[i])
@@ -142,8 +146,9 @@ def load_cifar_pyramid():
     X_train_gate = np.array(X_train_gate)
     y_train_gate = np.array(y_train_gate) # shape (num_samples, 2)
     fine_or_coarse_train_gate = np.array(fine_or_coarse_train_gate)
-
+    # print fine_or_coarse_train_gate.shape
     fine_or_coarse_test = []
+
     for i in xrange(X_test.shape[0]):
         fine_label = y_test[i,0]
         if fine_label in fine_labels_joint: # if label of current sample is one of the fine classes we trained on.
