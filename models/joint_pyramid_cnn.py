@@ -48,19 +48,19 @@ def build_network(output_dims=[20, 100]):
     network = max_pool_2d(network, 2)
 
 
-    coarse_network = conv_2d(network, 64, 3, activation='relu', name="unique/conv_1_coarse")
-    coarse_network = conv_2d(coarse_network, 64, 3, activation='relu', name="unique/conv_2_coarse")
+    coarse_network = conv_2d(network, 64, 3, activation='relu', name="unique_conv_1_coarse")
+    coarse_network = conv_2d(coarse_network, 64, 3, activation='relu', name="unique_conv_2_coarse")
     coarse_network = max_pool_2d(coarse_network, 2)
-    coarse_network = fully_connected(coarse_network, 512, activation='relu', name="unique/fc_1_coarse")
+    coarse_network = fully_connected(coarse_network, 512, activation='relu', name="unique_fc_1_coarse")
     coarse_network = dropout(coarse_network, 0.5)
-    coarse_network = fully_connected(coarse_network, coarse_dim, activation='softmax', name="unique/fc_2_coarse")
+    coarse_network = fully_connected(coarse_network, coarse_dim, activation='softmax', name="unique_fc_2_coarse")
 
-    fine_network = conv_2d(network, 64, 3, activation='relu', name="unique/conv_1_fine")
-    fine_network = conv_2d(fine_network, 64, 3, activation='relu', name="unique/conv_2_fine")
+    fine_network = conv_2d(network, 64, 3, activation='relu', name="unique_conv_1_fine")
+    fine_network = conv_2d(fine_network, 64, 3, activation='relu', name="unique_conv_2_fine")
     fine_network = max_pool_2d(fine_network, 2)
-    fine_network = fully_connected(fine_network, 512, activation='relu', name="unique/fc_1_fine")
+    fine_network = fully_connected(fine_network, 512, activation='relu', name="unique_fc_1_fine")
     fine_network = dropout(fine_network, 0.5)
-    fine_network = fully_connected(fine_network, fine_dim, activation='softmax', name="unique/fc_2_fine")
+    fine_network = fully_connected(fine_network, fine_dim, activation='softmax', name="unique_fc_2_fine")
 
     stacked_coarse_and_fine_net = tf.concat(1, [coarse_network, fine_network])
 

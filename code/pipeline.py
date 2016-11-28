@@ -72,7 +72,7 @@ def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
 
         # Otherwise, we're in training and we can simply
         print(existing_var_op_name)
-        if 'unique/' in existing_var_op_name:
+        if 'unique' in existing_var_op_name:
             return None
         else:
             return existing_var_op_name
