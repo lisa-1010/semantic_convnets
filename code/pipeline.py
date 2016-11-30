@@ -79,8 +79,10 @@ def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
 
     return variable_name_map_func
 
-def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=False, checkpoint_model_id=None):
+def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=False, checkpoint_model_id=None, get_hidden_reps=False):
     # should be used for all models
+
+    assert (is_training ^ get_hidden_reps), "If you train, you can't get hidden reps and vice versa. "
     print ('Loading model...')
 
     model_dict = ALL_MODEL_DICTS[model_id]
@@ -98,7 +100,8 @@ def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=Fal
     check_if_path_exists_or_create(checkpoint_path)
     check_if_path_exists_or_create(best_checkpoint_path)
 
-    network = load_network(network_type=network_type, n_classes=n_classes, pyramid_output_dims=pyramid_output_dims)
+    network = load_network(network_type=network_type, n_classes=n_classes, pyramid_output_dims=pyramid_output_dims,
+                           get_hidden_reps=get_hidden_reps)
 
     if is_training:
         model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
@@ -121,11 +124,11 @@ def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=Fal
     return model
 
 
-def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=None):
+def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=None, get_hidden_reps=False):
     network = None
 
     if network_type == 'simple_cnn':
-        network = simple_cnn.build_network([n_classes])
+        network = simple_cnn.build_network([n_classes], get_hidden_reps=get_hidden_reps)
     elif network_type == 'lenet_cnn':
         network = lenet_cnn.build_network([n_classes])
     elif network_type == 'lenet_small_cnn':
@@ -133,30 +136,30 @@ def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=No
     elif network_type == 'vggnet_cnn':
         network = vggnet_cnn.build_network([n_classes])
     elif network_type == 'simple_cnn_extended1':
-        network = simple_cnn_extended1.build_network([n_classes])
+        network = simple_cnn_extended1.build_network([n_classes], get_hidden_reps=get_hidden_reps)
     elif network_type == 'pyramid':
-        network = joint_pyramid_cnn.build_network(pyramid_output_dims)
+        network = joint_pyramid_cnn.build_network(pyramid_output_dims, get_hidden_reps=get_hidden_reps)
     else:
         print("Model {} not found. ".format(network_type))
         sys.exit()
     return network
 
 
-def load_data(dataset='cifar10'):
+def load_data(dataset='cifar10', num_training=50000, num_test=10000):
     print("Attempting to load dataset {} ...".format(dataset))
     X, Y, X_test, Y_test = None, None, None, None
     n_classes = 0
     if dataset == 'cifar10':
-        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
                                                     dataset='cifar10')
     elif dataset == 'cifar100_coarse':
-        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
                                                         dataset='cifar100')
         Y = Y[:,1]
         Y_test = Y_test[:,1]
 
     elif dataset == 'cifar100_fine':
-        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=50000, num_validation=0, num_test=10000,
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
                                                         dataset='cifar100')
         Y = Y[:, 0]
         Y_test = Y_test[:, 0]
@@ -167,6 +170,7 @@ def load_data(dataset='cifar10'):
     n_classes = DATASET_TO_N_CLASSES[dataset]
     X, Y = shuffle(X, Y)
     Y = to_categorical(Y, n_classes)
+    X_test, Y_test = shuffle(X_test, Y_test)
     Y_test = to_categorical(Y_test, n_classes)
     return X, Y, X_test, Y_test
 
@@ -273,6 +277,7 @@ def read_commandline_args():
 
     if model_id == None:
         model_id = 'simple_cnn'
+
 
     return mode, model_id, checkpoint_model_id
 

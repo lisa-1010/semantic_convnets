@@ -26,6 +26,8 @@ CIFAR10_DIR = '../data/cifar-10-batches-py'
 CIFAR100_DIR = '../data/cifar-100-python'
 
 
+EPSILON = 1e-8
+
 def change_to_array(M, H, W):
     N = len(M[0])
     X = np.array(M[0], dtype=float32).reshape((N,1,H,W))
@@ -34,7 +36,7 @@ def change_to_array(M, H, W):
 
 
 
-def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset='cifar10'):
+def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset='cifar10', normalize=True):
     """
     WARNING: Needs to be run from code directory, otherwise relative path
     will not work.
@@ -59,6 +61,11 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset=
         y_train = np.stack((y_fine_train, y_coarse_train)).swapaxes(0,1)
         y_test = np.stack((y_fine_test, y_coarse_test)).swapaxes(0,1)
 
+    mean_image = np.mean(X_train)
+    std_deviation = np.mean(np.std(X_train, axis=0))
+    print mean_image
+    print std_deviation
+
     # Subsample the data
     mask = range(num_training, num_training + num_validation)
     X_val = X_train[mask]
@@ -69,6 +76,16 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset=
     mask = range(num_test)
     X_test = X_test[mask]
     y_test = y_test[mask]
+
+    if normalize:
+        X_train -= mean_image
+        X_val -= mean_image
+        X_test -= mean_image
+
+        X_train /= (std_deviation + EPSILON)
+        X_val /= (std_deviation + EPSILON)
+        X_test /= (std_deviation + EPSILON)
+
 
     return X_train, y_train, X_val, y_val, X_test, y_test
 

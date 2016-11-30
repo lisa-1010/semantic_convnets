@@ -20,14 +20,14 @@ from tflearn.data_augmentation import ImageAugmentation
 
 
 # Convolutional network building
-def build_network(output_dims=None):
+def build_network(output_dims=None, get_hidden_reps=False):
     # outputdims is a list of num_classes
     # Real-time data preprocessing
 
 
     img_prep = ImagePreprocessing()
-    img_prep.add_featurewise_zero_center()
-    img_prep.add_featurewise_stdnorm()
+    # img_prep.add_featurewise_zero_center()
+    # img_prep.add_featurewise_stdnorm()
 
     # Real-time data augmentation
     img_aug = ImageAugmentation()
@@ -35,7 +35,7 @@ def build_network(output_dims=None):
     img_aug.add_random_rotation(max_angle=25.)
 
     network = input_data(shape=[None, 32, 32, 3],
-                         data_preprocessing=img_prep,
+                         # data_preprocessing=img_prep,
                          data_augmentation=img_aug)
     network = conv_2d(network, 32, 3, activation='relu')
     network = max_pool_2d(network, 2)
@@ -43,6 +43,8 @@ def build_network(output_dims=None):
     network = conv_2d(network, 64, 3, activation='relu')
     network = max_pool_2d(network, 2)
     network = fully_connected(network, 512, activation='relu')
+    if get_hidden_reps:
+        return network
     network = dropout(network, 0.5)
 
     networks = []
