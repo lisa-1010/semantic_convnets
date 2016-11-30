@@ -19,6 +19,18 @@ from numpy import append, array, int8, uint8, zeros, int32, float32
 import cPickle as pickle
 from scipy.misc import imread
 
+from sklearn.manifold import TSNE
+from tflearn.data_utils import to_categorical, pad_sequences
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+from matplotlib import style
+
+import pandas as pd
+import seaborn as sns
+from sklearn.decomposition import PCA
+
+
+
 from collections import defaultdict
 
 
@@ -288,6 +300,9 @@ def create_coarse_to_fine_map():
     print coarse_to_fine_map
     pickle.dump(coarse_to_fine_map, open('coarse_to_fine_map.pickle', 'wb+'))
     return coarse_to_fine_map
+
+
+
 
 
 if __name__=='__main__':
