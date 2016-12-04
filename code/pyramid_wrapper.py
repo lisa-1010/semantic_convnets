@@ -47,9 +47,8 @@ class PyramidWrapper(object):
         return fine_pred_classes, coarse_pred_classes
 
 
-    def predict_fine_or_coarse(self, X, confid_threshold=0.5):
-        n_samples = X.shape[0]
-        fine_pred_classes, coarse_pred_classes = self.predict_both_fine_and_coarse(X)
+    def predict_fine_or_coarse(self, fine_pred_classes, coarse_pred_classes, confid_threshold=0.5):
+        n_samples = fine_pred_classes.shape[0]
         fine_confidence_score = np.ones(n_samples) # TODO: actually compute the score for each sample given the prediction probs.
 
         final_pred_classes = [] # list for final predictions, each prediction is EITHER coarse OR fine.
@@ -70,24 +69,25 @@ def compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y_fine_coarse, f
             true_classes.append(Y_fine_coarse[i, 0])
         else:  # shoud predict coarse
             true_classes.append(Y_fine_coarse[i, 1])
-    acc = accuracy_score(np.argmax(true_classes, axis=1), final_pred_classes)
+    acc = accuracy_score(true_classes, final_pred_classes)
     return acc
 
 
 def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=0.5):
     # expects model to be an instance of PyramidWrapper
-    final_pred_classes = model.predict_fine_or_coarse(X, confid_threshold=confid_threshold)
-    fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
-    print("Accuracy for predict coarse OR fine: {}".format(fine_or_coarse_acc))
 
     fine_pred_classes, coarse_pred_classes = model.predict_both_fine_and_coarse(X)
 
     Y_fine, Y_coarse = Y[:,0], Y[:,1]
-    fine_acc = accuracy_score(np.argmax(Y_fine), fine_pred_classes)
-    coarse_acc = accuracy_score(np.argmax(Y_coarse), coarse_pred_classes)
+    fine_acc = accuracy_score(Y_fine, fine_pred_classes)
+    coarse_acc = accuracy_score(Y_coarse, coarse_pred_classes)
 
     print("Accuracy for coarse predictions: {}".format(coarse_acc))
     print("Accuracy for fine predictions: {}".format(fine_acc))
+
+    final_pred_classes = model.predict_fine_or_coarse(fine_pred_classes, coarse_pred_classes, confid_threshold=confid_threshold)
+    fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
+    print("Accuracy for predict coarse OR fine: {}".format(fine_or_coarse_acc))
 
 
 if __name__ == "__main__":
