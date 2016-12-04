@@ -42,22 +42,34 @@ class PyramidWrapper(object):
     def predict_both_fine_and_coarse(self, X):
         coarse_pred_probs = self.coarse_model.predict(X)
         fine_pred_probs = self.fine_model.predict(X)
+        return np.array(fine_pred_probs), np.array(coarse_pred_probs)
+
+
+    def predict_fine_or_coarse(self, fine_pred_probs, coarse_pred_probs, confid_threshold=15):
+        n_samples = fine_pred_probs.shape[0]
+        fine_confidence_scores = compute_confidence_scores(fine_pred_probs)
+
+        print (fine_confidence_scores)
+
         coarse_pred_classes = np.argmax(coarse_pred_probs, axis=1)
         fine_pred_classes = np.argmax(fine_pred_probs, axis=1)
-        return fine_pred_classes, coarse_pred_classes
-
-
-    def predict_fine_or_coarse(self, fine_pred_classes, coarse_pred_classes, confid_threshold=0.5):
-        n_samples = fine_pred_classes.shape[0]
-        fine_confidence_score = np.ones(n_samples) # TODO: actually compute the score for each sample given the prediction probs.
 
         final_pred_classes = [] # list for final predictions, each prediction is EITHER coarse OR fine.
+        n_fine = 0
         for i in xrange(n_samples):
-            if fine_confidence_score[i] > confid_threshold:
+            if fine_confidence_scores[i] > confid_threshold:
                 final_pred_classes.append(fine_pred_classes[i])
+                n_fine += 1
             else:
                 final_pred_classes.append(coarse_pred_classes[i])
+        print ("predicted fine label {} times out of {} total samples.".format(n_fine, n_samples))
         return np.array(final_pred_classes)
+
+
+def compute_confidence_scores(pred_probs):
+    n_classes = pred_probs.shape[1]
+    confidence_scores = np.amax(pred_probs, axis=1) * n_classes
+    return confidence_scores
 
 
 def compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y_fine_coarse, fine_or_coarse):
@@ -73,10 +85,13 @@ def compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y_fine_coarse, f
     return acc
 
 
-def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=0.5):
+def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=15):
     # expects model to be an instance of PyramidWrapper
 
-    fine_pred_classes, coarse_pred_classes = model.predict_both_fine_and_coarse(X)
+    fine_pred_probs, coarse_pred_probs = model.predict_both_fine_and_coarse(X)
+
+    coarse_pred_classes = np.argmax(coarse_pred_probs, axis=1)
+    fine_pred_classes = np.argmax(fine_pred_probs, axis=1)
 
     Y_fine, Y_coarse = Y[:,0], Y[:,1]
     fine_acc = accuracy_score(Y_fine, fine_pred_classes)
@@ -85,7 +100,7 @@ def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=0.5):
     print("Accuracy for coarse predictions: {}".format(coarse_acc))
     print("Accuracy for fine predictions: {}".format(fine_acc))
 
-    final_pred_classes = model.predict_fine_or_coarse(fine_pred_classes, coarse_pred_classes, confid_threshold=confid_threshold)
+    final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs, confid_threshold=confid_threshold)
     fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
     print("Accuracy for predict coarse OR fine: {}".format(fine_or_coarse_acc))
 
@@ -93,4 +108,5 @@ def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=0.5):
 if __name__ == "__main__":
     pyramid_model = PyramidWrapper(checkpoint_model_id="pyramid_cifar100")
     X, Y, fine_or_coarse = load_data_pyramid(return_subset='test_only')
-    evaluate_predictions(pyramid_model, X, Y, fine_or_coarse, confid_threshold=0.5)
+    # evaluate_predictions(pyramid_model, X[:10], Y[:10], fine_or_coarse[:10], confid_threshold=15)
+    evaluate_predictions(pyramid_model, X, Y, fine_or_coarse, confid_threshold=15)
