@@ -12,6 +12,7 @@
 
 import os, struct
 import numpy as np
+from tflearn.data_utils import shuffle
 
 from array import array as pyarray
 from numpy import append, array, int8, uint8, zeros, int32, float32
@@ -29,9 +30,9 @@ import pandas as pd
 import seaborn as sns
 from sklearn.decomposition import PCA
 
-
-
 from collections import defaultdict
+
+from constants import *
 
 
 CIFAR10_DIR = '../data/cifar-10-batches-py'
@@ -39,6 +40,56 @@ CIFAR100_DIR = '../data/cifar-100-python'
 
 
 EPSILON = 1e-8
+
+
+def load_data(dataset='cifar10', num_training=50000, num_test=10000):
+    print("Attempting to load dataset {} ...".format(dataset))
+    X, Y, X_test, Y_test = None, None, None, None
+    n_classes = 0
+    if dataset == 'cifar10':
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
+                                                    dataset='cifar10')
+    elif dataset == 'cifar100_coarse':
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
+                                                        dataset='cifar100')
+        Y = Y[:,1]
+        Y_test = Y_test[:,1]
+
+    elif dataset == 'cifar100_fine':
+        X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
+                                                        dataset='cifar100')
+        Y = Y[:, 0]
+        Y_test = Y_test[:, 0]
+
+    else:
+        print ("Dataset {} not found. ".format(dataset))
+        sys.exit()
+    n_classes = DATASET_TO_N_CLASSES[dataset]
+    X, Y = shuffle(X, Y)
+    Y = to_categorical(Y, n_classes)
+    X_test, Y_test = shuffle(X_test, Y_test)
+    Y_test = to_categorical(Y_test, n_classes)
+    return X, Y, X_test, Y_test
+
+
+def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
+    if dataset == 'cifar100_joint':
+        X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
+        fine_or_coarse_test = load_cifar_pyramid()
+    else:
+        print("Dataset {} not found. ".format(dataset))
+    if return_subset == 'all':
+        return X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, fine_or_coarse_test
+    elif return_subset == 'joint_only':
+        return X_train_joint, y_train_joint
+    elif return_subset == 'gate_only':
+        return X_train_gate, y_train_gate, fine_or_coarse_train_gate
+    elif return_subset == 'test_only':
+        return X_test, y_test, fine_or_coarse_test
+
+
+#####################################################################################################################
+
 
 def change_to_array(M, H, W):
     N = len(M[0])
@@ -148,13 +199,11 @@ def load_cifar_pyramid():
         fine_labels_gate.update(set(fine_labels[:4]))
         fine_labels_only_test.update(set(fine_labels[4]))
 
-
-
     X_train_joint, y_train_joint = [], []
 
     X_train_gate, y_train_gate = [], []
 
-    fine_or_coarse_train_gate = [] # a 0 indicates it should predict fine, a 1 indicate it should be predict coarse.
+    fine_or_coarse_train_gate = [] # a 0 indicates it should predict fine, a 1 indicate it should predict coarse.
 
     for i in xrange(X_train.shape[0]):
         fine_label = fine_label_names[y_train[i, 0]]

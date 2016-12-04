@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-A slightly modified tflearn example. Reference: https://github.com/tflearn/tflearn
+TODOs:
+- add confidence score predictor for both coarse and fine
 
-Convolutional network applied to CIFAR-10 dataset classification task.
-References:
-    Learning Multiple Layers of Features from Tiny Images, A. Krizhevsky, 2009.
-Links:
-    [CIFAR-10 Dataset](https://www.cs.toronto.edu/~kriz/cifar.html)
 """
 from __future__ import division, print_function, absolute_import
 
@@ -20,7 +16,7 @@ from tflearn.data_augmentation import ImageAugmentation
 
 import tensorflow as tf
 # Convolutional network building
-def build_network(output_dims=[20, 100], get_hidden_reps=False):
+def build_network(output_dims=[20, 100], get_hidden_reps=False, get_fc_softmax_activations=False):
 
 
     assert (len(output_dims) == 2), "output_dims needs to be of length 2, containing coarse_dim and fine_dim."
@@ -59,6 +55,15 @@ def build_network(output_dims=[20, 100], get_hidden_reps=False):
 
     if get_hidden_reps:
         return (coarse_hidden_reps, fine_hidden_reps)
+
+    if get_fc_softmax_activations:
+        # return the last layer of the coarse and the fine branch.
+        # needed so we can write a custom function which takes the activations, computes the confidence scores and
+        # decides at what level of the hierarchy to predict.
+        return (coarse_network, fine_network)
+
+    # coarse_confidence =
+    # fine_confidence =
 
     stacked_coarse_and_fine_net = tf.concat(1, [coarse_network, fine_network])
 

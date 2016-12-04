@@ -1,5 +1,20 @@
-from pipeline import *
-from utils import *
+# -*- coding: utf-8 -*-
+# vis.py
+# @author: Lisa Wang
+# @created: Nov 29 2016
+#===============================================================================
+# DESCRIPTION:
+# Exports functions to visualize network embeddings
+#===============================================================================
+# CURRENT STATUS: Working
+#===============================================================================
+# USAGE:
+# from vis import *
+# # To see how this module is used, please refer to examples in
+# tsne_experiments.ipynb notebook.
+#===============================================================================
+
+from model_utils import *
 import numpy as np
 import tensorflow as tf
 from sklearn.manifold import TSNE
@@ -10,7 +25,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn.decomposition import PCA
-
 
 
 def visualize_embeddings_with_tsne(model_id, X, Y, label_names):
@@ -32,7 +46,7 @@ def visualize_embeddings_with_tsne(model_id, X, Y, label_names):
     dim_1 = np.reshape(tsne_results[:,1], tsne_results.shape[0])
 
     sns.set_palette("Set2", 10)
-    colors =sns.color_palette("cubehelix",10)
+    colors = sns.color_palette("cubehelix",10)
 
     plt.figure(figsize=(6,6))
     for label in xrange(n_classes):
