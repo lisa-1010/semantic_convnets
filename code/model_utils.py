@@ -203,7 +203,7 @@ def train_cnn_rnn_model(model_id='cnn_rnn_cifar100', dataset='cifar100_joint_pre
     run_id = "{}_{}".format(model_id, date_time_string)
 
     print("Shapes of X and Y:")
-    print(X_train_gate.shape)
+    print(np.asarray(X_train_gate).shape)
     print(y_train_gate.shape)
     print("Example: ")
     print(X_train_gate[0])

@@ -20,7 +20,7 @@ from tflearn.data_augmentation import ImageAugmentation
 
 
 # Convolutional network building
-def build_network(output_dims=None, get_hidden_reps=False):
+def build_network(output_dims=None, get_hidden_reps=False, detatch_final_layer=False):
     # outputdims is a list of num_classes
     # Real-time data preprocessing
 

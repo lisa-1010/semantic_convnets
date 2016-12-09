@@ -13,8 +13,8 @@ from tflearn.layers.conv import conv_2d, max_pool_2d
 from tflearn.layers.estimator import regression
 from tflearn.data_preprocessing import ImagePreprocessing
 from tflearn.data_augmentation import ImageAugmentation
-
 import tensorflow as tf
+
 # Convolutional network building
 def build_network(n_classes, get_hidden_reps=False):
     #assert n_output_units is not None, \
@@ -23,29 +23,41 @@ def build_network(n_classes, get_hidden_reps=False):
 
     # input tensor is prefeature_size x n_output_units
     n_output_units = 2
-    prefeature_embedding_size = 516
+    prefeature_embedding_size = 512
     single_output_token_size = (100 + 20 + 1)
 
-    net = input_data(shape=[None, n_output_units, prefeature_embedding_size])
-    net = tflearn.lstm(net, 512, return_seq=True) # This returns [# of samples, # of timesteps, output dim]
-    #net = tflearn.dropout(g, 0.5) # TODO
-    net = tf.reshape(net, [-1, n_output_units * prefeature_embedding_size]) # This reshapes so that the outputs are stacked
+    net = input_data(shape=[None, prefeature_embedding_size])
+
+    # Basically, this repeats the input several times to be fed into the LSTM
+    net = tf.tile(net, [1, n_output_units])
+    net = tf.reshape(net, [-1, n_output_units, prefeature_embedding_size])
+
+    net = tflearn.lstm(net, single_output_token_size, return_seq=True) # This returns [# of samples, # of timesteps, output dim]
+
+    fine_network, coarse_network = net
+    fine_network = fully_connected(fine_network, single_output_token_size, activation='softmax')
+    coarse_network = fully_connected(coarse_network, single_output_token_size, activation='softmax')
+
+    stacked_coarse_and_fine_net = tf.concat(1, [coarse_network, fine_network])
+
+    #net = tf.reshape(net, [-1, n_output_units * prefeature_embedding_size]) # This reshapes so that the outputs are stacked
+    #net = fully_connected(net, 2*single_output_token_size, activation='softmax')
 
     # We need to split this and attach different losses
     target_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, n_output_units*single_output_token_size))
 
     def coarse_and_fine_joint_loss(incoming, placeholder):
         coarse_pred = incoming[:, :single_output_token_size]
-        fine_pred = incoming[:, single_output_token_size:]
         coarse_target = placeholder[:, :single_output_token_size]
-        fine_target = placeholder[:, single_output_token_size:]
-
         coarse_loss = tflearn.categorical_crossentropy(coarse_pred, coarse_target)
+
+        fine_pred = incoming[:, single_output_token_size:]
+        fine_target = placeholder[:, single_output_token_size:]
         fine_loss = tflearn.categorical_crossentropy(fine_pred, fine_target)
 
         return coarse_loss + fine_loss
 
-    net = regression(net, placeholder=target_placeholder, optimizer='adam',
+    net = regression(stacked_coarse_and_fine_net , placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
                              #metric=coarse_and_fine_accuracy,
                              learning_rate=0.001)
