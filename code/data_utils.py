@@ -72,12 +72,20 @@ def load_data(dataset='cifar10', num_training=50000, num_test=10000):
     return X, Y, X_test, Y_test
 
 
+def load_cifar100_prefeaturized():
+    dataset_name = "cifar100_joint_prefeaturized"
+    return pickle.load(open("../data/feature_sets/cifar100_joint_prefeaturized"))
+
 def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
     if dataset == 'cifar100_joint':
         X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
         fine_or_coarse_test = load_cifar_pyramid()
+    elif dataset == 'cifar100_joint_prefeaturized':
+        X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
+        fine_or_coarse_test = load_cifar100_prefeaturized()
     else:
-        print("Dataset {} not found. ".format(dataset))
+        raise Exception("Dataset {} not found. ".format(dataset))
+
     if return_subset == 'all':
         return X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, fine_or_coarse_test
     elif return_subset == 'joint_only':

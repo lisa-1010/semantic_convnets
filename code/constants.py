@@ -18,5 +18,7 @@ ALL_MODEL_DICTS = {
     'lenet_cnn_cifar100_fine': {'network_type': 'lenet_cnn', 'dataset': 'cifar100_fine'},
     'vggnet_cnn_cifar100_fine': {'network_type': 'vggnet_cnn', 'dataset': 'cifar100_fine'},
 
-    'pyramid_cifar100': {'network_type': 'pyramid', 'dataset': 'cifar100_joint'}
+    'pyramid_cifar100': {'network_type': 'pyramid', 'dataset': 'cifar100_joint'},
+
+    'cnn_rnn_cifar100': {'network_type': 'cnn_rnn', 'dataset': 'cifar100_joint_prefeaturized'}
 }

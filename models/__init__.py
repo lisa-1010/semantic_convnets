@@ -4,3 +4,4 @@ import lenet_cnn
 import lenet_small_cnn
 import vggnet_cnn
 import joint_pyramid_cnn
+import cnn_rnn
