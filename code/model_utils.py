@@ -20,6 +20,7 @@ from __future__ import division, print_function, absolute_import
 
 import os, sys, getopt
 import datetime
+import pickle
 
 import tensorflow as tf
 import tflearn
@@ -50,6 +51,19 @@ def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
             return existing_var_op_name
 
     return variable_name_map_func
+
+
+def save_features(X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, \
+    X_test, y_test, fine_or_coarse_test, checkpoint_model_id, dataset):
+    feature_set_storage_dir = "../data/feature_sets"
+    check_if_path_exists_or_create("/" + feature_set_storage_dir)
+
+    feature_set_pickle_name = "{}/{}_prefeaturized".format(feature_set_storage_dir, dataset)
+
+    dataset_contents = [X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, \
+    X_test, y_test, fine_or_coarse_test]
+
+    pickle.dump(dataset_contents, open(feature_set_pickle_name, "wb"))
 
 
 def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=False, checkpoint_model_id=None, get_hidden_reps=False):
@@ -113,6 +127,8 @@ def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=No
         assert (pyramid_output_dims != None), "If you try to load the pyramid model, you need to provide the " \
                                               "pyramid_output_dims, which is a list [coarse_dim, fine_dim]"
         network = joint_pyramid_cnn.build_network(pyramid_output_dims, get_hidden_reps=get_hidden_reps )
+    elif network_type == "cnn_rnn":
+        network = cnn_rnn.build_network(n_classes, get_hidden_reps=get_hidden_reps)
     else:
         print("Model {} not found. ".format(network_type))
         sys.exit()
@@ -153,6 +169,52 @@ def train_pyramid_model(model_id='pyramid_cifar100', dataset='cifar100_joint',  
     run_id = "{}_{}".format(model_id, date_time_string)
 
     model.fit(X_train_joint, y_train_joint, n_epoch=50, shuffle=True, validation_set=0.1,
+              show_metric=True, batch_size=128, run_id=run_id, snapshot_step=100)
+
+
+def form_y_for_cnn_rnn(y, fine_or_coarse_gate, coarse_dim, fine_dim):
+    coarse_indexes, fine_indexes = y[:, 1] + fine_dim, y[:, 0]
+    total_dim = coarse_dim + fine_dim + 1
+
+    locations_of_end_token = fine_or_coarse_gate * -2 + 1  # 1 for not end token, -1 for end token
+    fine_indexes = fine_indexes * locations_of_end_token  # any end token now has negative index
+    fine_indexes[fine_indexes < 0] = total_dim - 1  # swap negative for end token
+
+    coarse_one_hots = to_categorical(coarse_indexes, total_dim)
+    fine_one_hots = to_categorical(fine_indexes, total_dim)
+
+    y_joint = np.concatenate((coarse_one_hots, fine_one_hots), axis=1)
+
+    return y_joint
+
+def train_cnn_rnn_model(model_id='cnn_rnn_cifar100', dataset='cifar100_joint_prefeaturized',  checkpoint_model_id=None):
+    coarse_dim = 20
+    fine_dim = 100
+    n_classes = coarse_dim + fine_dim + 1 # add 1 for the end token
+
+    X_train_gate, y_train_gate, fine_or_coarse_train_gate = load_data_pyramid(dataset=dataset, return_subset="gate_only")
+    X_test, y_test, fine_or_coarse_test = load_data_pyramid(dataset=dataset, return_subset="test_only")
+
+    y_train_gate = form_y_for_cnn_rnn(y_train_gate, fine_or_coarse_train_gate, coarse_dim=coarse_dim, fine_dim=fine_dim)
+    y_test = form_y_for_cnn_rnn(y_test, fine_or_coarse_test, coarse_dim=coarse_dim, fine_dim=fine_dim)
+
+    model = load_model(model_id, n_classes=n_classes, is_training=True, checkpoint_model_id=checkpoint_model_id)
+
+    date_time_string = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    run_id = "{}_{}".format(model_id, date_time_string)
+
+    print("Shapes of X and Y:")
+    print(np.asarray(X_train_gate).shape)
+    print(y_train_gate.shape)
+    print("Example: ")
+    print(X_train_gate[0])
+    print(y_train_gate[0])
+
+    # Need to also tile this...
+    #np.tile(b, 2)
+
+    print("\n\n\nFitting these now...")
+    model.fit(X_train_gate, y_train_gate, n_epoch=50, shuffle=True, validation_set=0.1,
               show_metric=True, batch_size=128, run_id=run_id, snapshot_step=100)
 
 
