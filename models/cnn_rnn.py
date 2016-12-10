@@ -57,6 +57,19 @@ def build_network(n_classes, get_hidden_reps=False):
 
         return coarse_loss + fine_loss
 
+    def coarse_and_fine_accuracy(y_pred, y_true, x):
+        coarse_pred = y_pred[:, :single_output_token_size]
+        fine_pred = y_pred[:, single_output_token_size:]
+        coarse_target = y_true[:, :single_output_token_size]
+        fine_target = y_true[:, single_output_token_size:]
+
+        coarse_acc = tflearn.metrics.accuracy_op(coarse_pred, coarse_target)
+        fine_acc = tflearn.metrics.accuracy_op(fine_pred, fine_target)
+
+        # rounded_coarse_acc = tf.to_float(tf.round(coarse_acc * 1000) * 100000)
+        # return tf.add(rounded_coarse_acc, fine_acc)
+        return (fine_acc + coarse_acc)/2.0
+
     net = regression(stacked_coarse_and_fine_net , placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
                              #metric=coarse_and_fine_accuracy,
