@@ -60,7 +60,17 @@ def load_data(dataset='cifar10', num_training=50000, num_test=10000):
                                                         dataset='cifar100')
         Y = Y[:, 0]
         Y_test = Y_test[:, 0]
+    elif dataset == 'cifar100_joint_fine_only':
+        X_train_joint, y_train_joint = load_data_pyramid(dataset="cifar100_joint", return_subset='joint_only')
+        all_X = X_train_joint
+        all_Y = y_train_joint[:, 0]  # extract only FINE... no coarse
+        all_X, all_Y = shuffle(all_X, all_Y)
 
+        testSplitIndex = int(len(all_X) * 0.85)
+        X = all_X[:testSplitIndex]
+        Y = all_Y[:testSplitIndex]
+        X_test = all_X[testSplitIndex:]
+        Y_test = all_Y[testSplitIndex:]
     else:
         print ("Dataset {} not found. ".format(dataset))
         sys.exit()

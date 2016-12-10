@@ -1,7 +1,8 @@
 DATASET_TO_N_CLASSES = {
     'cifar10' : 10,
     'cifar100_coarse': 20,
-    'cifar100_fine': 100
+    'cifar100_fine': 100,
+    'cifar100_joint_fine_only': 100
 }
 
 
@@ -20,5 +21,6 @@ ALL_MODEL_DICTS = {
 
     'pyramid_cifar100': {'network_type': 'pyramid', 'dataset': 'cifar100_joint'},
 
+    'simple_cnn_cifar100_fine_for_featurization': {'network_type': 'simple_cnn', 'dataset': 'cifar100_joint_fine_only'},
     'cnn_rnn_cifar100': {'network_type': 'cnn_rnn', 'dataset': 'cifar100_joint_prefeaturized'}
 }
