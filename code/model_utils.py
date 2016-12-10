@@ -51,6 +51,7 @@ def get_weights_to_preload_function(model_id, checkpoint_model_id, is_training):
 
     return variable_name_map_func
 
+
 def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=False, checkpoint_model_id=None, get_hidden_reps=False):
     # should be used for all models
 
