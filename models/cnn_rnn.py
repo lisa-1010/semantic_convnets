@@ -109,11 +109,13 @@ def build_network(n_classes, get_hidden_reps=False):
             fine_pred = fine_network
             fine_target = target_placeholder[:, single_output_token_size:]
             correct_fine_pred = tf.equal(tf.argmax(fine_pred, 1), tf.argmax(fine_target, 1))
-            fine_acc_value = tf.reduce_mean(tf.cast(correct_fine_pred, tf.float32), name="fine_accuracy")
+            fine_acc_value = tf.reduce_mean(tf.cast(correct_fine_pred, tf.float32))
 
-    with tf.name_scope('Accuracy'):
+    with tf.name_scope('Combination_Accuracies'):
         with tf.name_scope('Both_Correct_Accuracy'):
             both_correct_acc_value = tflearn.metrics.accuracy_op(stacked_coarse_and_fine_net, target_placeholder)
+        with tf.name_scope('Average_Accuracy'):
+            avg_acc_value = (coarse_acc_value+fine_acc_value) / 2
 
     net = regression(stacked_coarse_and_fine_net, placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
