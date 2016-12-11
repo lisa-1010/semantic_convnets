@@ -68,7 +68,8 @@ def build_network(n_classes, get_hidden_reps=False):
 
         # rounded_coarse_acc = tf.to_float(tf.round(coarse_acc * 1000) * 100000)
         # return tf.add(rounded_coarse_acc, fine_acc)
-        tf.add_to_collection(tf.GraphKeys.ACTIVATIONS, coarse_acc)
+        tf.scalar_summary("coarse_acc", coarse_acc)
+        tf.scalar_summary("fine_acc", fine_acc)
 
         return (fine_acc + coarse_acc)/2.0
 
