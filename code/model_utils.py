@@ -91,7 +91,7 @@ def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=Fal
                            get_hidden_reps=get_hidden_reps)
 
     if is_training:
-        model = tflearn.DNN(network, tensorboard_verbose=3, tensorboard_dir=tensorboard_dir,
+        model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
                             checkpoint_path=checkpoint_path, best_checkpoint_path=best_checkpoint_path, max_checkpoints=3)
     else:
         model = tflearn.DNN(network)
