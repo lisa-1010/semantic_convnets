@@ -120,7 +120,7 @@ def build_network(n_classes, get_hidden_reps=False):
     net = regression(stacked_coarse_and_fine_net, placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
                              metric=coarse_and_fine_accuracy,
-                             validation_monitors=[coarse_acc_value, fine_acc_value, both_correct_acc_value],
+                             validation_monitors=[coarse_acc_value, fine_acc_value, both_correct_acc_value, avg_acc_value],
                              learning_rate=0.0001)
 
 
