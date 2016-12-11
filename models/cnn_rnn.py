@@ -59,6 +59,8 @@ def build_network(n_classes, get_hidden_reps=False):
 
         return coarse_loss + fine_loss
 
+
+
     def coarse_and_fine_accuracy(y_pred, y_true, x):
         coarse_pred = y_pred[:, :single_output_token_size]
         fine_pred = y_pred[:, single_output_token_size:]
@@ -68,18 +70,49 @@ def build_network(n_classes, get_hidden_reps=False):
         coarse_acc = tflearn.metrics.accuracy_op(coarse_pred, coarse_target)
         fine_acc = tflearn.metrics.accuracy_op(fine_pred, fine_target)
 
+        ## LISA --- All this code isn't required to be here.... but after taking 6 hours to figure out how to make this
+        ##          work... it felt wrong to delete all of this... lol
+
         # rounded_coarse_acc = tf.to_float(tf.round(coarse_acc * 1000) * 100000)
         # return tf.add(rounded_coarse_acc, fine_acc)
+        #with tf.Graph().as_default():
+        #import tflearn.helpers.summarizer as s
+        #s.summarize(coarse_acc, 'scalar', "test_summary")
+        #summaries.get_summary(type, name, value, summary_collection)
+        #tflearn.summaries.get_summary("scalar", "coarse_acc", coarse_acc, "test_summary_collection")
+        #tflearn.summaries.get_summary("scalar", "fine_acc", fine_acc, "test_summary_collection")
+        #summaries.add_gradients_summary(grads, "", "", summary_collection)
+        #sum1 = tf.scalar_summary("coarse_acc", coarse_acc)
+        #tf.merge_summary([sum1])
+
+        #tf.merge_summary(tf.get_collection("test_summary_collection"))
+        #tflearn.summaries.get_summary("scalar", "coarse_acc", coarse_acc)
+        #tflearn.summaries.get_summary("scalar", "fine_acc", fine_acc)
         #tf.scalar_summary("fine_acc", fine_acc)
 
-        tf_summarizer.summarize(coarse_acc, "scalar", "Coarse_accuracy")
-        tf_summarizer.summarize(fine_acc, "scalar", "Fine_accuracy")
+        #tf_summarizer.summarize(coarse_acc, "scalar", "Coarse_accuracy")
+        #tf_summarizer.summarize(fine_acc, "scalar", "Fine_accuracy")
+        return (fine_acc + coarse_acc) / 2.0
 
-        return (fine_acc + coarse_acc)/2.0
+    #test_const = tf.constant(32.0, name="custom_constant")
+    #sum1 = tf.scalar_summary("dumb_contant", test_const)
+    #tf.merge_summary([sum1])
 
-    net = regression(stacked_coarse_and_fine_net , placeholder=target_placeholder, optimizer='adam',
+    coarse_pred = coarse_network
+    coarse_target = target_placeholder[:, :single_output_token_size]
+    correct_coarse_pred = tf.equal(tf.argmax(coarse_pred, 1), tf.argmax(coarse_target, 1))
+    coarse_acc_value = tf.reduce_mean(tf.cast(correct_coarse_pred, tf.float32), name="coarse_accuracy")
+
+    fine_pred = fine_network
+    fine_target = target_placeholder[:, single_output_token_size:]
+    correct_fine_pred = tf.equal(tf.argmax(fine_pred, 1), tf.argmax(fine_target, 1))
+    fine_acc_value = tf.reduce_mean(tf.cast(correct_fine_pred, tf.float32), name="fine_accuracy")
+
+    net = regression(stacked_coarse_and_fine_net, placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
                              metric=coarse_and_fine_accuracy,
+                             validation_monitors=[coarse_acc_value, fine_acc_value],
                              learning_rate=0.0001)
+
 
     return net
