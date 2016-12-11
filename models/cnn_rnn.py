@@ -113,7 +113,7 @@ def build_network(n_classes, get_hidden_reps=False):
 
     with tf.name_scope('Accuracy'):
         with tf.name_scope('Both_Correct_Accuracy'):
-        both_correct_acc_value = tflearn.metrics.accuracy_op(stacked_coarse_and_fine_net, target_placeholder)
+            both_correct_acc_value = tflearn.metrics.accuracy_op(stacked_coarse_and_fine_net, target_placeholder)
 
     net = regression(stacked_coarse_and_fine_net, placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
