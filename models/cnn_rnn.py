@@ -99,16 +99,20 @@ def build_network(n_classes, get_hidden_reps=False):
     #tf.merge_summary([sum1])
 
     with tf.name_scope('Accuracy'):
-        coarse_pred = coarse_network
-        coarse_target = target_placeholder[:, :single_output_token_size]
-        correct_coarse_pred = tf.equal(tf.argmax(coarse_pred, 1), tf.argmax(coarse_target, 1))
-        coarse_acc_value = tf.reduce_mean(tf.cast(correct_coarse_pred, tf.float32), name="coarse_accuracy")
+        with tf.name_scope('Coarse_Accuracy'):
+            coarse_pred = coarse_network
+            coarse_target = target_placeholder[:, :single_output_token_size]
+            correct_coarse_pred = tf.equal(tf.argmax(coarse_pred, 1), tf.argmax(coarse_target, 1))
+            coarse_acc_value = tf.reduce_mean(tf.cast(correct_coarse_pred, tf.float32))
 
-        fine_pred = fine_network
-        fine_target = target_placeholder[:, single_output_token_size:]
-        correct_fine_pred = tf.equal(tf.argmax(fine_pred, 1), tf.argmax(fine_target, 1))
-        fine_acc_value = tf.reduce_mean(tf.cast(correct_fine_pred, tf.float32), name="fine_accuracy")
+        with tf.name_scope('Fine_Accuracy'):
+            fine_pred = fine_network
+            fine_target = target_placeholder[:, single_output_token_size:]
+            correct_fine_pred = tf.equal(tf.argmax(fine_pred, 1), tf.argmax(fine_target, 1))
+            fine_acc_value = tf.reduce_mean(tf.cast(correct_fine_pred, tf.float32), name="fine_accuracy")
 
+    with tf.name_scope('Accuracy'):
+        with tf.name_scope('Both_Correct_Accuracy'):
         both_correct_acc_value = tflearn.metrics.accuracy_op(stacked_coarse_and_fine_net, target_placeholder)
 
     net = regression(stacked_coarse_and_fine_net, placeholder=target_placeholder, optimizer='adam',
