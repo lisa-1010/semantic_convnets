@@ -26,6 +26,8 @@ if [ $# -ne 0 ]; then
             sudo pip install git+https://github.com/tflearn/tflearn.git
             git clone https://github.com/lisa-1010/semantic_convnets
             sudo pip install matplotlib
+            sudo pip install pandas
+            sudo pip install seaborn
             sudo apt-get install python-tk
             sudo pip install -r semantic_convnets/requirements.txt
 ENDSSH

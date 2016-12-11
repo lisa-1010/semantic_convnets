@@ -1,5 +1,5 @@
 import simple_cnn
-import simple_cnn_extended1
+import simple_cnn_extended_1
 import lenet_cnn
 import lenet_small_cnn
 import vggnet_cnn

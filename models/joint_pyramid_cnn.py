@@ -40,6 +40,7 @@ def build_network(output_dims=[20, 100], get_hidden_reps=False, get_fc_softmax_a
     coarse_network = conv_2d(network, 64, 3, activation='relu', name="unique_conv_1_coarse")
     coarse_network = conv_2d(coarse_network, 64, 3, activation='relu', name="unique_conv_2_coarse")
     coarse_network = max_pool_2d(coarse_network, 2)
+
     coarse_network = fully_connected(coarse_network, 512, activation='relu', name="unique_fc_1_coarse")
     coarse_hidden_reps = coarse_network
     coarse_network = dropout(coarse_network, 0.5)

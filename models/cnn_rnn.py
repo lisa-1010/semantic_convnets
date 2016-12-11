@@ -68,11 +68,13 @@ def build_network(n_classes, get_hidden_reps=False):
 
         # rounded_coarse_acc = tf.to_float(tf.round(coarse_acc * 1000) * 100000)
         # return tf.add(rounded_coarse_acc, fine_acc)
+        tf.add_to_collection(tf.GraphKeys.ACTIVATIONS, coarse_acc)
+
         return (fine_acc + coarse_acc)/2.0
 
     net = regression(stacked_coarse_and_fine_net , placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
-                             #metric=coarse_and_fine_accuracy,
+                             metric=coarse_and_fine_accuracy,
                              learning_rate=0.001)
 
     return net

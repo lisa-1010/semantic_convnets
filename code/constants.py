@@ -22,5 +22,6 @@ ALL_MODEL_DICTS = {
     'pyramid_cifar100': {'network_type': 'pyramid', 'dataset': 'cifar100_joint'},
 
     'simple_cnn_cifar100_fine_for_featurization': {'network_type': 'simple_cnn', 'dataset': 'cifar100_joint_fine_only'},
+    'simple_cnn_extended_1_cifar100_fine_for_featurization': {'network_type': 'simple_cnn_extended_1', 'dataset': 'cifar100_joint_fine_only'},
     'cnn_rnn_cifar100': {'network_type': 'cnn_rnn', 'dataset': 'cifar100_joint_prefeaturized'}
 }

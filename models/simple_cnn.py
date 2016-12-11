@@ -52,7 +52,7 @@ def build_network(output_dims=None, get_hidden_reps=False):
         cur_network = fully_connected(network, output_dim, activation='softmax', name="unique_FullyConnected_output_dim_{}".format(output_dim))
         cur_network = regression(cur_network, optimizer='adam',
                              loss='categorical_crossentropy',
-                             learning_rate=0.001)
+                             learning_rate=0.0000001)
         networks.append(cur_network)
 
     import tensorflow as tf

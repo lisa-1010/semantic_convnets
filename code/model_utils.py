@@ -91,7 +91,7 @@ def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=Fal
                            get_hidden_reps=get_hidden_reps)
 
     if is_training:
-        model = tflearn.DNN(network, tensorboard_verbose=2, tensorboard_dir=tensorboard_dir,
+        model = tflearn.DNN(network, tensorboard_verbose=3, tensorboard_dir=tensorboard_dir,
                             checkpoint_path=checkpoint_path, best_checkpoint_path=best_checkpoint_path, max_checkpoints=3)
     else:
         model = tflearn.DNN(network)
@@ -121,8 +121,8 @@ def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=No
         network = lenet_small_cnn.build_network([n_classes])
     elif network_type == 'vggnet_cnn':
         network = vggnet_cnn.build_network([n_classes])
-    elif network_type == 'simple_cnn_extended1':
-        network = simple_cnn_extended1.build_network([n_classes], get_hidden_reps=get_hidden_reps)
+    elif network_type == 'simple_cnn_extended_1':
+        network = simple_cnn_extended_1.build_network([n_classes], get_hidden_reps=get_hidden_reps)
     elif network_type == 'pyramid':
         assert (pyramid_output_dims != None), "If you try to load the pyramid model, you need to provide the " \
                                               "pyramid_output_dims, which is a list [coarse_dim, fine_dim]"
@@ -214,7 +214,7 @@ def train_cnn_rnn_model(model_id='cnn_rnn_cifar100', dataset='cifar100_joint_pre
     #np.tile(b, 2)
 
     print("\n\n\nFitting these now...")
-    model.fit(X_train_gate, y_train_gate, n_epoch=50, shuffle=True, validation_set=0.1,
+    model.fit(X_train_gate, y_train_gate, n_epoch=200, shuffle=True, validation_set=0.1,
               show_metric=True, batch_size=128, run_id=run_id, snapshot_step=100)
 
 
