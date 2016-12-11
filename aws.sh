@@ -29,6 +29,7 @@ if [ $# -ne 0 ]; then
             sudo pip install pandas
             sudo pip install seaborn
             sudo apt-get install python-tk
+            Y
             sudo pip install -r semantic_convnets/requirements.txt
 ENDSSH
 
