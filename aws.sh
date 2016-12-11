@@ -5,7 +5,7 @@
 #        if arg0 == "pull", then will pull to current directory from aws instance whatever is at arg1
 #        if arg0 == "setup", then will ssh into instance, run setup scripts, and then exit
 
-IPADDR="35.162.37.43"
+IPADDR="35.165.88.202"
 
 if [ $# -ne 0 ]; then
     if [ "$1" = "ssh" ]; then
