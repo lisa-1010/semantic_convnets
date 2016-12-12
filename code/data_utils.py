@@ -107,7 +107,7 @@ def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
         return X_test, y_test, fine_or_coarse_test
 
 
-def load_cifar_pyramid_test_subset(test_subset="seen_fine"):
+def load_pyramid_test_subset(test_subset="seen_fine"):
     # test_subset: "seen_fine" (A), "seen_coarse" (B), "unseen" (C)
     coarse_to_fine_map = load_coarse_to_fine_map()
     X_test, y_test, fine_or_coarse_test = load_data_pyramid(dataset='cifar100_joint', return_subset='test_only')
@@ -458,7 +458,7 @@ if __name__=='__main__':
     # print fine_label_names
     # print coarse_label_names
 
-    X_test_A, y_test_A, fine_or_coarse_A = load_cifar_pyramid_test_subset()
+    X_test_A, y_test_A, fine_or_coarse_A = load_pyramid_test_subset()
     print X_test_A.shape
     print y_test_A.shape
     print fine_or_coarse_A.shape
