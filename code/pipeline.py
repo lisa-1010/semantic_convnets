@@ -76,7 +76,7 @@ def main():
     if mode == 'train':
         if model_id == 'pyramid_cifar100':
             train_pyramid_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)
-        elif model_id == 'cnn_rnn_cifar100':
+        elif model_id == 'cnn_rnn_cifar100' or model_id == 'cnn_rnn_end_to_end_cifar100':
             train_cnn_rnn_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)
         else:
             train_model(model_id, dataset, checkpoint_model_id=checkpoint_model_id)

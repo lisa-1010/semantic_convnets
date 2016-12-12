@@ -28,7 +28,28 @@ def build_network(n_classes, get_hidden_reps=False):
     prefeature_embedding_size = 512
     single_output_token_size = (100 + 20 + 1)
 
-    net = input_data(shape=[None, prefeature_embedding_size])
+    # Real-time data augmentation
+    img_aug = ImageAugmentation()
+    img_aug.add_random_flip_leftright()
+    img_aug.add_random_rotation(max_angle=25.)
+
+    network = input_data(shape=[None, 32, 32, 3],
+                         # data_preprocessing=img_prep,
+                         data_augmentation=img_aug)
+    network = conv_2d(network, 32, 3, activation='relu')
+    network = max_pool_2d(network, 2)
+    network = conv_2d(network, 64, 3, activation='relu')
+    network = conv_2d(network, 64, 3, activation='relu')
+    network = max_pool_2d(network, 2)
+
+    network = conv_2d(network, 64, 3, activation='relu')
+    network = conv_2d(network, 64, 3, activation='relu')
+    network = max_pool_2d(network, 2)
+
+    network = fully_connected(network, 512, activation='relu')
+    network = fully_connected(network, 512, activation='relu')
+
+    net = network # can preload weights up until this point to possibly make faster
 
     # Basically, this repeats the input several times to be fed into the LSTM
     net = tf.tile(net, [1, n_output_units])
@@ -41,9 +62,6 @@ def build_network(n_classes, get_hidden_reps=False):
     coarse_network = fully_connected(coarse_network, single_output_token_size, activation='softmax')
 
     stacked_coarse_and_fine_net = tf.concat(1, [coarse_network, fine_network])
-
-    #net = tf.reshape(net, [-1, n_output_units * prefeature_embedding_size]) # This reshapes so that the outputs are stacked
-    #net = fully_connected(net, 2*single_output_token_size, activation='softmax')
 
     # We need to split this and attach different losses
     target_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, n_output_units*single_output_token_size))

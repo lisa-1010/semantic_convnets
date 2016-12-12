@@ -4,8 +4,8 @@
 #        if arg0 == "ssh", then will ssh into the instance
 #        if arg0 == "pull", then will pull to current directory from aws instance whatever is at arg1
 #        if arg0 == "setup", then will ssh into instance, run setup scripts, and then exit
-
-IPADDR="35.165.88.202"
+# For reference: Tensorflow AMI id: ami-133ae673
+IPADDR="35.160.50.31"
 
 if [ $# -ne 0 ]; then
     if [ "$1" = "ssh" ]; then

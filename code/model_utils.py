@@ -129,6 +129,8 @@ def load_network(network_type='simple_cnn', n_classes=10, pyramid_output_dims=No
         network = joint_pyramid_cnn.build_network(pyramid_output_dims, get_hidden_reps=get_hidden_reps )
     elif network_type == "cnn_rnn":
         network = cnn_rnn.build_network(n_classes, get_hidden_reps=get_hidden_reps)
+    elif network_type == "cnn_rnn_end_to_end":
+        network = cnn_rnn_end_to_end.build_network(n_classes, get_hidden_reps=get_hidden_reps)
     else:
         print("Model {} not found. ".format(network_type))
         sys.exit()
