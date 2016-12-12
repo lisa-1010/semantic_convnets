@@ -86,6 +86,7 @@ def load_cifar100_prefeaturized():
     dataset_name = "cifar100_joint_prefeaturized"
     return pickle.load(open("../data/feature_sets/cifar100_joint_prefeaturized"))
 
+
 def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
     if dataset == 'cifar100_joint':
         X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
@@ -104,6 +105,58 @@ def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
         return X_train_gate, y_train_gate, fine_or_coarse_train_gate
     elif return_subset == 'test_only':
         return X_test, y_test, fine_or_coarse_test
+
+
+def load_cifar_pyramid_test_subset(test_subset="seen_fine"):
+    # test_subset: "seen_fine" (A), "seen_coarse" (B), "unseen" (C)
+    coarse_to_fine_map = load_coarse_to_fine_map()
+    X_test, y_test, fine_or_coarse_test = load_data_pyramid(dataset='cifar100_joint', return_subset='test_only')
+    print X_test.shape
+    fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
+
+    fine_labels_seen_fine = set()
+    fine_labels_seen_coarse = set()
+    fine_labels_unseen = set()
+
+    for coarse_label, fine_labels in coarse_to_fine_map.iteritems():
+        fine_labels_seen_fine.update(set(fine_labels[:2]))
+        fine_labels_seen_coarse.update(set(fine_labels[2:4]))
+        fine_labels_unseen.update(set(fine_labels[4]))
+
+    # Subset of test set with fine labels that have been used during training
+    # For this subset, the model should ideally always predict the fine label
+    X_test_A, y_test_A, fine_or_coarse_A = [], [], []
+    X_test_B, y_test_B, fine_or_coarse_B = [], [], []
+    X_test_C, y_test_C, fine_or_coarse_C = [], [], []
+
+    # a 0  in coarse_or_fine indicates it should predict fine, a 1 indicate it should predict coarse.
+
+    for i in xrange(X_test.shape[0]):
+        fine_label = fine_label_names[y_test[i, 0]]
+        if fine_label in fine_labels_seen_fine:
+            X_test_A.append(X_test[i])
+            y_test_A.append(y_test[i])
+            fine_or_coarse_A.append(fine_or_coarse_test[i])
+        elif fine_label in fine_labels_seen_coarse:
+            X_test_B.append(X_test[i])
+            y_test_B.append(y_test[i])
+            fine_or_coarse_B.append(fine_or_coarse_test[i])
+        elif fine_label in fine_labels_unseen:
+            X_test_C.append(X_test[i])
+            y_test_C.append(y_test[i])
+            fine_or_coarse_C.append(fine_or_coarse_test[i])
+
+    X_test_A, y_test_A, fine_or_coarse_A = np.array(X_test_A), np.array(y_test_A), np.array(fine_or_coarse_A)
+    X_test_B, y_test_B, fine_or_coarse_B = np.array(X_test_B), np.array(y_test_B), np.array(fine_or_coarse_B)
+    X_test_C, y_test_C, fine_or_coarse_C = np.array(X_test_C), np.array(y_test_C), np.array(fine_or_coarse_C)
+
+    if test_subset == "seen_fine":
+        return X_test_A, y_test_A, fine_or_coarse_A
+    elif test_subset == "seen_coarse":
+        return X_test_B, y_test_B, fine_or_coarse_B
+    elif test_subset == "unseen":
+        X_test_C, y_test_C, fine_or_coarse_C
+
 
 
 #####################################################################################################################
@@ -201,12 +254,25 @@ def load_cifar_train_test(dataset='cifar10'):
 
 
 
+def get_cifar_fine_labels_split(coarse_to_fine_map):
+    fine_labels_joint = set()
+    fine_labels_gate = set()
+    fine_labels_only_test = set()
+
+    for coarse_label, fine_labels in coarse_to_fine_map.iteritems():
+        fine_labels_joint.update(set(fine_labels[:2]))
+        fine_labels_gate.update(set(fine_labels[:4]))
+        fine_labels_only_test.update(set(fine_labels[4]))
+
+    return fine_labels_joint, fine_labels_gate, fine_labels_only_test
+
+
 def load_cifar_pyramid():
     dataset = 'cifar100'
     X_train, y_train, X_test, y_test = load_cifar_train_test(dataset)
 
     coarse_to_fine_map = load_coarse_to_fine_map()
-
+    #
     fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
     fine_labels_joint = set()
     fine_labels_gate = set()
@@ -392,5 +458,8 @@ if __name__=='__main__':
     # print fine_label_names
     # print coarse_label_names
 
-
-    coarse_to_fine_map = create_coarse_to_fine_map()
+    X_test_A, y_test_A, fine_or_coarse_A = load_cifar_pyramid_test_subset()
+    print X_test_A.shape
+    print y_test_A.shape
+    print fine_or_coarse_A.shape
+    # coarse_to_fine_map = create_coarse_to_fine_map()
