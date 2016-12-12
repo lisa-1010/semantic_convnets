@@ -28,6 +28,7 @@ from sklearn.decomposition import PCA
 
 
 def visualize_embeddings_with_tsne(model_id, X, Y, label_names):
+    print "HI"
     # Y has to be dense (not one-hot)
     n_classes = len(label_names)
     hidden_reps = None
@@ -46,7 +47,7 @@ def visualize_embeddings_with_tsne(model_id, X, Y, label_names):
     dim_1 = np.reshape(tsne_results[:,1], tsne_results.shape[0])
 
     sns.set_palette("Set2", 10)
-    colors = sns.color_palette("cubehelix",10)
+    colors = sns.color_palette("cubehelix",len(label_names))
 
     plt.figure(figsize=(6,6))
     for label in xrange(n_classes):

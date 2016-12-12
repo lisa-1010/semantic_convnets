@@ -16,6 +16,13 @@ if [ $# -ne 0 ]; then
         echo "scp -r -i ~/.ssh/MyndbookEBKeyPair.pem ubuntu@$IPADDR:~/$2"
         scp -r -i ~/.ssh/MyndbookEBKeyPair.pem ubuntu@$IPADDR:~/$2 .
     fi
+
+    if [ "$1" = "push" ]; then
+        echo "Pulling to current directory: "
+        echo "scp -r -i ~/.ssh/MyndbookEBKeyPair.pem $2 ubuntu@$IPADDR:~/$3"
+        scp -r -i ~/.ssh/MyndbookEBKeyPair.pem $2 ubuntu@$IPADDR:~/$3
+    fi
+
     if [ "$1" = "setup" ]; then
         ssh -i ~/.ssh/MyndbookEBKeyPair.pem ubuntu@$IPADDR <<-'ENDSSH'
             #commands to run on remote host

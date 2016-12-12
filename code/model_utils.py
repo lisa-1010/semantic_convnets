@@ -235,3 +235,6 @@ def test_model(model_id='simple_cnn', dataset='cifar10'):
     pred_test = np.argmax(pred_test_probs, axis=1)
     test_acc = accuracy_score(pred_test, np.argmax(Y_test, axis=1))
     print("Test acc: {}".format( test_acc))
+    import matplotlib.pyplot as plt
+
+    plt.imshow(image_to_show)
