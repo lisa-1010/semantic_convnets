@@ -55,11 +55,11 @@ def build_network(n_classes, get_hidden_reps=False):
     net = tf.tile(net, [1, n_output_units])
     net = tf.reshape(net, [-1, n_output_units, prefeature_embedding_size])
 
-    net = tflearn.lstm(net, single_output_token_size, return_seq=True, name="___unique___lstm") # This returns [# of samples, # of timesteps, output dim]
+    net = tflearn.lstm(net, single_output_token_size, return_seq=True, name="actuallyunique_lstm") # This returns [# of samples, # of timesteps, output dim]
 
     fine_network, coarse_network = net
-    fine_network = fully_connected(fine_network, single_output_token_size, activation='softmax', name="___unique___fine_fc")
-    coarse_network = fully_connected(coarse_network, single_output_token_size, activation='softmax', name="___unique___fine_fc")
+    fine_network = fully_connected(fine_network, single_output_token_size, activation='softmax', name="actuallyunique_fine_fc")
+    coarse_network = fully_connected(coarse_network, single_output_token_size, activation='softmax', name="actuallyunique_fine_fc")
 
     stacked_coarse_and_fine_net = tf.concat(1, [coarse_network, fine_network])
 
