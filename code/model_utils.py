@@ -69,7 +69,7 @@ def save_features(X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine
 def load_model(model_id, n_classes=10, pyramid_output_dims=None, is_training=False, checkpoint_model_id=None, get_hidden_reps=False):
     # should be used for all models
 
-    assert (is_training ^ get_hidden_reps), "If you train, you can't get hidden reps and vice versa. "
+    assert (not (is_training and get_hidden_reps)), "If you train, you can't get hidden reps and vice versa. "
     print ('Loading model...')
 
     model_dict = ALL_MODEL_DICTS[model_id]
@@ -148,7 +148,7 @@ def train_model(model_id='simple_cnn', dataset='cifar10', checkpoint_model_id=No
 
     X, Y, X_test, Y_test = load_data(dataset)
 
-    model.fit(X, Y, n_epoch=50, shuffle=True, validation_set=0.1,
+    model.fit(X, Y, n_epoch=200, shuffle=True, validation_set=0.1,
               show_metric=True, batch_size=128, run_id=run_id, snapshot_step=100)
 
 
