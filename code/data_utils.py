@@ -312,7 +312,8 @@ def load_cifar_pyramid():
     fine_or_coarse_test = []
 
     for i in xrange(X_test.shape[0]):
-        fine_label = y_test[i,0]
+        fine_label = fine_label_names[y_test[i,0]]
+        print fine_label
         if fine_label in fine_labels_joint: # if label of current sample is one of the fine classes we trained on.
             fine_or_coarse_test.append(0)
         else:
