@@ -62,13 +62,34 @@ def build_network(n_classes, get_hidden_reps=False):
 
 
     def coarse_and_fine_accuracy(y_pred, y_true, x):
-        coarse_pred = y_pred[:, :single_output_token_size]
-        fine_pred = y_pred[:, single_output_token_size:]
-        coarse_target = y_true[:, :single_output_token_size]
-        fine_target = y_true[:, single_output_token_size:]
+        raw_predictions = y_pred
+        raw_predictions = tf.reshape(raw_predictions, (-1, 2, single_output_token_size))
+        raw_predictions = tf.argmax(raw_predictions, 2)
 
-        coarse_acc = tflearn.metrics.accuracy_op(coarse_pred, coarse_target)
-        fine_acc = tflearn.metrics.accuracy_op(fine_pred, fine_target)
+        raw_corrects = y_true
+        raw_corrects = tf.reshape(raw_corrects, (-1, 2, single_output_token_size))
+        raw_corrects = tf.argmax(raw_corrects, 2)
+
+        hierarchical_pred = simplifyToHierarchicalFormat(raw_predictions)
+        hierarchical_target = simplifyToHierarchicalFormat(raw_corrects)
+
+        hierarchical_corrects = tf.equal(hierarchical_pred, hierarchical_target)
+        hierarchical_acc = tf.reduce_mean(tf.cast(hierarchical_corrects, tf.float32))
+
+        return hierarchical_acc
+
+        ##### To calculate the average accuracy, do:
+        #####
+        # coarse_pred = y_pred[:, :single_output_token_size]
+        # fine_pred = y_pred[:, single_output_token_size:]
+        # coarse_target = y_true[:, :single_output_token_size]
+        # fine_target = y_true[:, single_output_token_size:]
+        #
+        # coarse_acc = tflearn.metrics.accuracy_op(coarse_pred, coarse_target)
+        # fine_acc = tflearn.metrics.accuracy_op(fine_pred, fine_target)
+        # return (fine_acc + coarse_acc) / 2.0
+        #####
+        #####
 
         ## LISA --- All this code isn't required to be here.... but after taking 6 hours to figure out how to make this
         ##          work... it felt wrong to delete all of this... lol
@@ -92,11 +113,26 @@ def build_network(n_classes, get_hidden_reps=False):
 
         #tf_summarizer.summarize(coarse_acc, "scalar", "Coarse_accuracy")
         #tf_summarizer.summarize(fine_acc, "scalar", "Fine_accuracy")
-        return (fine_acc + coarse_acc) / 2.0
+
 
     #test_const = tf.constant(32.0, name="custom_constant")
     #sum1 = tf.scalar_summary("dumb_contant", test_const)
     #tf.merge_summary([sum1])
+
+    # Class predictions are in the form [[A, B], ...], where A=Coarse, B=Fine
+    def simplifyToHierarchicalFormat(class_labels, end_token=120):
+        fine_labels = class_labels[:, 1]
+        coarse_labels = class_labels[:, 0]
+
+        coarse_labels_mask = tf.cast(tf.equal(fine_labels, end_token), tf.int64)
+        coarse_labels_to_permit = coarse_labels * coarse_labels_mask
+
+        fine_labels_mask = tf.cast(tf.not_equal(fine_labels, end_token), tf.int64)
+        fine_labels_to_permit = fine_labels * fine_labels_mask
+
+        hierarchical_labels = coarse_labels_to_permit + fine_labels_to_permit
+
+        return hierarchical_labels
 
     with tf.name_scope('Accuracy'):
         with tf.name_scope('Coarse_Accuracy'):
@@ -116,11 +152,27 @@ def build_network(n_classes, get_hidden_reps=False):
             both_correct_acc_value = tflearn.metrics.accuracy_op(stacked_coarse_and_fine_net, target_placeholder)
         with tf.name_scope('Average_Accuracy'):
             avg_acc_value = (coarse_acc_value+fine_acc_value) / 2
+        with tf.name_scope('Hierarchical_Accuracy'):
+            raw_predictions = stacked_coarse_and_fine_net
+            raw_predictions = tf.reshape(raw_predictions, (-1, 2, single_output_token_size))
+            raw_predictions = tf.argmax(raw_predictions, 2)
+
+            raw_corrects = target_placeholder
+            raw_corrects = tf.reshape(raw_corrects, (-1, 2, single_output_token_size))
+            raw_corrects = tf.argmax(raw_corrects, 2)
+
+            hierarchical_pred = simplifyToHierarchicalFormat(raw_predictions)
+            hierarchical_target = simplifyToHierarchicalFormat(raw_corrects)
+
+            hierarchical_corrects = tf.equal(hierarchical_pred, hierarchical_target)
+            hierarchical_acc = tf.reduce_mean(tf.cast(hierarchical_corrects, tf.float32))
+            # Reduce the prediction and the actual to ONE dimension
+
 
     net = regression(stacked_coarse_and_fine_net, placeholder=target_placeholder, optimizer='adam',
                              loss=coarse_and_fine_joint_loss,
                              metric=coarse_and_fine_accuracy,
-                             validation_monitors=[coarse_acc_value, fine_acc_value, both_correct_acc_value, avg_acc_value],
+                             validation_monitors=[coarse_acc_value, fine_acc_value, both_correct_acc_value, avg_acc_value, hierarchical_acc],
                              learning_rate=0.0001)
 
 
