@@ -75,7 +75,7 @@ def build_network(n_classes, get_hidden_reps=False):
         fine_target = placeholder[:, single_output_token_size:]
         fine_loss = tflearn.categorical_crossentropy(fine_pred, fine_target)
 
-        return coarse_loss + fine_loss
+        return 4*coarse_loss + fine_loss
 
 
 
