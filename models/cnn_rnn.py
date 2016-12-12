@@ -74,7 +74,7 @@ def build_network(n_classes, get_hidden_reps=False):
         hierarchical_target = simplifyToHierarchicalFormat(raw_corrects)
 
         hierarchical_corrects = tf.equal(hierarchical_pred, hierarchical_target)
-        hierarchical_acc = tf.reduce_mean(tf.cast(hierarchical_corrects, tf.float32))
+        hierarchical_acc = tf.reduce_mean(tf.cast(hierarchical_corrects, tf.float32), name="Hierarchical_accuracy")
 
         return hierarchical_acc
 
