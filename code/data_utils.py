@@ -42,26 +42,26 @@ CIFAR100_DIR = '../data/cifar-100-python'
 EPSILON = 1e-8
 
 
-def load_data(dataset='cifar10', num_training=50000, num_test=10000):
+def load_data(dataset='cifar10', num_training=50000, num_test=10000, normalize=True):
     print("Attempting to load dataset {} ...".format(dataset))
     X, Y, X_test, Y_test = None, None, None, None
     n_classes = 0
     if dataset == 'cifar10':
         X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
-                                                    dataset='cifar10')
+                                                    dataset='cifar10', normalize=normalize)
     elif dataset == 'cifar100_coarse':
         X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
-                                                        dataset='cifar100')
+                                                        dataset='cifar100', normalize=normalize)
         Y = Y[:,1]
         Y_test = Y_test[:,1]
 
     elif dataset == 'cifar100_fine':
         X, Y, X_val, Y_val, X_test, Y_test = load_cifar(num_training=num_training, num_validation=0, num_test=num_test,
-                                                        dataset='cifar100')
+                                                        dataset='cifar100', normalize=normalize)
         Y = Y[:, 0]
         Y_test = Y_test[:, 0]
     elif dataset == 'cifar100_joint_fine_only':
-        X_train_joint, y_train_joint = load_data_pyramid(dataset="cifar100_joint", return_subset='joint_only')
+        X_train_joint, y_train_joint = load_data_pyramid(dataset="cifar100_joint", return_subset='joint_only', normalize=normalize)
         all_X = X_train_joint
         all_Y = y_train_joint[:, 0]  # extract only FINE... no coarse
         all_X, all_Y = shuffle(all_X, all_Y)
@@ -87,10 +87,10 @@ def load_cifar100_prefeaturized():
     return pickle.load(open("../data/feature_sets/cifar100_joint_prefeaturized"))
 
 
-def load_data_pyramid(dataset='cifar100_joint', return_subset='all'):
+def load_data_pyramid(dataset='cifar100_joint', return_subset='all', normalize=True):
     if dataset == 'cifar100_joint':
         X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
-        fine_or_coarse_test = load_cifar_pyramid()
+        fine_or_coarse_test = load_cifar_pyramid(normalize=normalize)
     elif dataset == 'cifar100_joint_prefeaturized':
         X_train_joint, y_train_joint, X_train_gate, y_train_gate, fine_or_coarse_train_gate, X_test, y_test, \
         fine_or_coarse_test = load_cifar100_prefeaturized()
@@ -111,7 +111,6 @@ def load_pyramid_test_subset(test_subset="seen_fine"):
     # test_subset: "seen_fine" (A), "seen_coarse" (B), "unseen" (C)
     coarse_to_fine_map = load_coarse_to_fine_map()
     X_test, y_test, fine_or_coarse_test = load_data_pyramid(dataset='cifar100_joint', return_subset='test_only')
-    print X_test.shape
     fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
 
     fine_labels_seen_fine = set()
@@ -121,7 +120,7 @@ def load_pyramid_test_subset(test_subset="seen_fine"):
     for coarse_label, fine_labels in coarse_to_fine_map.iteritems():
         fine_labels_seen_fine.update(set(fine_labels[:2]))
         fine_labels_seen_coarse.update(set(fine_labels[2:4]))
-        fine_labels_unseen.update(set(fine_labels[4]))
+        fine_labels_unseen.update(set(fine_labels[4:5]))
 
     # Subset of test set with fine labels that have been used during training
     # For this subset, the model should ideally always predict the fine label
@@ -155,7 +154,7 @@ def load_pyramid_test_subset(test_subset="seen_fine"):
     elif test_subset == "seen_coarse":
         return X_test_B, y_test_B, fine_or_coarse_B
     elif test_subset == "unseen":
-        X_test_C, y_test_C, fine_or_coarse_C
+        return X_test_C, y_test_C, fine_or_coarse_C
 
 
 
@@ -169,14 +168,12 @@ def change_to_array(M, H, W):
     return X, y
 
 
-
-def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset='cifar10', normalize=True):
+def load_cifar(num_training=50000, num_validation=0, num_test=10000, dataset='cifar10', normalize=True):
     """
     WARNING: Needs to be run from code directory, otherwise relative path
     will not work.
     Load the CIFAR-10 or CIFAR-100 dataset from disk.
     Returns train, validation and test sets.
-    Note that num_training, num_validation and num_test have to be > 0.
 
     Important note for cifar100:
     Since cifar100 images have both fine labels (100) and coarse labels (20 superclasses),
@@ -187,6 +184,7 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset=
     y_coarse = y[:,1]
     """
     # Load the raw CIFAR-10 data
+    print (dataset)
     assert (dataset in ['cifar10', 'cifar100']), "dataset has to be either cifar10 or cifar100. "
     if dataset == 'cifar10':
         X_train, y_train, X_test, y_test = _load_cifar10(CIFAR10_DIR)
@@ -197,8 +195,15 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset=
 
     mean_image = np.mean(X_train)
     std_deviation = np.mean(np.std(X_train, axis=0))
-    print mean_image
-    print std_deviation
+
+    print ("mean: {}".format(mean_image))
+    print ("std dev: {}".format(std_deviation))
+    if normalize:
+        print ("Normalizing data")
+        X_train -= mean_image
+        X_test -= mean_image
+        X_train /= (std_deviation + EPSILON)
+        X_test /= (std_deviation + EPSILON)
 
     # Subsample the data
     mask = range(num_training, num_training + num_validation)
@@ -211,47 +216,7 @@ def load_cifar(num_training=49000, num_validation=1000, num_test=10000, dataset=
     X_test = X_test[mask]
     y_test = y_test[mask]
 
-    if normalize:
-        X_train -= mean_image
-        X_val -= mean_image
-        X_test -= mean_image
-
-        X_train /= (std_deviation + EPSILON)
-        X_val /= (std_deviation + EPSILON)
-        X_test /= (std_deviation + EPSILON)
-
-
     return X_train, y_train, X_val, y_val, X_test, y_test
-
-
-
-def load_cifar_train_test(dataset='cifar10'):
-    """
-    WARNING: Needs to be run from code directory, otherwise relative path
-    will not work.
-    Load the CIFAR-10 or CIFAR-100 dataset from disk.
-    Returns train, validation and test sets.
-    Note that num_training, num_validation and num_test have to be > 0.
-
-    Important note for cifar100:
-    Since cifar100 images have both fine labels (100) and coarse labels (20 superclasses),
-    the returned y matrix has shape (num_samples, 2), where the first column corresponds to fine labels, and
-    second column corresponds to coarse labels.
-    Hence:
-    y_fine = y[:,0]
-    y_coarse = y[:,1]
-    """
-    # Load the raw CIFAR-10 data
-    assert (dataset in ['cifar10', 'cifar100']), "dataset has to be either cifar10 or cifar100. "
-    if dataset == 'cifar10':
-        X_train, y_train, X_test, y_test = _load_cifar10(CIFAR10_DIR)
-    elif dataset == 'cifar100':
-        X_train, y_fine_train, y_coarse_train, X_test, y_fine_test, y_coarse_test = _load_cifar100(CIFAR100_DIR)
-        y_train = np.stack((y_fine_train, y_coarse_train)).swapaxes(0,1)
-        y_test = np.stack((y_fine_test, y_coarse_test)).swapaxes(0,1)
-
-    return X_train, y_train, X_test, y_test
-
 
 
 def get_cifar_fine_labels_split(coarse_to_fine_map):
@@ -267,9 +232,9 @@ def get_cifar_fine_labels_split(coarse_to_fine_map):
     return fine_labels_joint, fine_labels_gate, fine_labels_only_test
 
 
-def load_cifar_pyramid():
-    dataset = 'cifar100'
-    X_train, y_train, X_test, y_test = load_cifar_train_test(dataset)
+def load_cifar_pyramid(normalize=True):
+    X_train, y_train, X_val, y_val, X_test, y_test = \
+        load_cifar(num_training=50000, num_validation=0, num_test=10000, dataset='cifar100', normalize=normalize)
 
     coarse_to_fine_map = load_coarse_to_fine_map()
     #
@@ -313,7 +278,6 @@ def load_cifar_pyramid():
 
     for i in xrange(X_test.shape[0]):
         fine_label = fine_label_names[y_test[i,0]]
-        print fine_label
         if fine_label in fine_labels_joint: # if label of current sample is one of the fine classes we trained on.
             fine_or_coarse_test.append(0)
         else:
@@ -415,7 +379,7 @@ def load_coarse_to_fine_map():
 
 def create_coarse_to_fine_map():
     coarse_to_fine_map = defaultdict(set)
-    X_train, y_train, X_test, y_test = load_cifar_train_test(dataset='cifar100')
+    X_train, y_train, X_val, y_val, X_test, y_test = load_cifar(dataset='cifar100')
     fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
 
     fine_y_train = y_train[:, 0]
