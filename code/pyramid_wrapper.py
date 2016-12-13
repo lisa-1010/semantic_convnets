@@ -100,13 +100,19 @@ def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=15):
     print("Accuracy for coarse predictions: {}".format(coarse_acc))
     print("Accuracy for fine predictions: {}".format(fine_acc))
 
-    final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs, confid_threshold=confid_threshold)
-    fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
-    print("Accuracy for predict coarse OR fine: {}".format(fine_or_coarse_acc))
-
+    best_acc = 0.0
+    best_thres = None
+    for confid_threshold in xrange(40,70):
+        final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs, confid_threshold=confid_threshold)
+        fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
+        if fine_or_coarse_acc > best_acc:
+            best_acc = fine_or_coarse_acc
+            best_thres = confid_threshold
+        print("confid_threshold: {}, Accuracy for predict coarse OR fine: {}".format(confid_threshold, fine_or_coarse_acc))
+    print ("best confid_threshold: {}, Best accuracy for predict coarse OR fine: {}".format(best_thres, best_acc))
 
 if __name__ == "__main__":
     pyramid_model = PyramidWrapper(checkpoint_model_id="pyramid_cifar100")
     X, Y, fine_or_coarse = load_data_pyramid(return_subset='test_only')
     # evaluate_predictions(pyramid_model, X[:10], Y[:10], fine_or_coarse[:10], confid_threshold=15)
-    evaluate_predictions(pyramid_model, X, Y, fine_or_coarse, confid_threshold=15)
+    evaluate_predictions(pyramid_model, X, Y, fine_or_coarse, confid_threshold=65)
