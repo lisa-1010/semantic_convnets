@@ -133,7 +133,7 @@ def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=None):
         print("confid_threshold: {}, hierarchical accuracy: {}".format(confid_threshold,
                                                                                      fine_or_coarse_acc))
 
-def examine_images_and_predictions_pyramid(model, X, y, confid_threshold=74):
+def examine_images_and_predictions_pyramid(model, X, y, confid_threshold=74, n_samples=50):
     # add third column to say which one predicted
     fine_pred_probs, coarse_pred_probs = model.predict_both_fine_and_coarse(X)
     fine_confidence_scores = compute_confidence_scores(fine_pred_probs)
@@ -143,7 +143,7 @@ def examine_images_and_predictions_pyramid(model, X, y, confid_threshold=74):
     y_fine, y_coarse = y[:,0], y[:,1]
     fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
 
-    for i in xrange(50):
+    for i in xrange(n_samples):
         img = X[i]
         img = denormalize_image(img, mean=MEAN_PIXEL_CIFAR)
         plt.figure(num=None, figsize=(1, 1), dpi=32, facecolor='w', edgecolor='k')
