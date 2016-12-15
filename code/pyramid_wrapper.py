@@ -3,6 +3,8 @@ from __future__ import division, print_function, absolute_import
 import os, sys, getopt
 import datetime
 
+from tabulate import tabulate
+
 import tensorflow as tf
 import tflearn
 from tflearn.data_utils import shuffle, to_categorical
@@ -12,13 +14,15 @@ import numpy as np
 from utils import *
 from model_utils import *
 from data_utils import *
+from constants import *
 
 sys.path.append("../") # so we can import models.
 from models import *
 
 class PyramidWrapper(object):
     def __init__(self, checkpoint_model_id):
-        coarse_net, fine_net = joint_pyramid_cnn.build_network(output_dims=[20, 100],  get_fc_softmax_activations=True)
+        coarse_net, fine_net = joint_pyramid_cnn.build_network(output_dims=[N_COARSE_CIFAR, N_FINE_CIFAR],
+                                                               get_fc_softmax_activations=True)
         self.checkpoint_model_id = checkpoint_model_id
         self.coarse_model = tflearn.DNN(coarse_net)
         self.fine_model = tflearn.DNN(fine_net)
@@ -45,11 +49,20 @@ class PyramidWrapper(object):
         return np.array(fine_pred_probs), np.array(coarse_pred_probs)
 
 
-    def predict_fine_or_coarse(self, fine_pred_probs, coarse_pred_probs, confid_threshold=15):
+    def predict_fine_or_coarse(self, fine_pred_probs, coarse_pred_probs, confid_threshold=74):
+        """
+        Args:
+            fine_pred_probs: Predictions for fine
+            coarse_pred_probs: Predictions for coarse
+            confid_threshold: confidence threshold used  by model to decide whether to predict coarse or fine
+
+        Returns: an array of shape (n_samples,). Each value > 20 corresponds to a coarse class, each value
+        >= 20 corresponds to fine class, fine class indices are therefore offset by 20. (a value of 20 correpsonds
+        to the fine class at index 0)
+
+        """
         n_samples = fine_pred_probs.shape[0]
         fine_confidence_scores = compute_confidence_scores(fine_pred_probs)
-
-        print (fine_confidence_scores)
 
         coarse_pred_classes = np.argmax(coarse_pred_probs, axis=1)
         fine_pred_classes = np.argmax(fine_pred_probs, axis=1)
@@ -58,7 +71,7 @@ class PyramidWrapper(object):
         n_fine = 0
         for i in xrange(n_samples):
             if fine_confidence_scores[i] > confid_threshold:
-                final_pred_classes.append(fine_pred_classes[i])
+                final_pred_classes.append(N_COARSE_CIFAR + fine_pred_classes[i])
                 n_fine += 1
             else:
                 final_pred_classes.append(coarse_pred_classes[i])
@@ -78,9 +91,11 @@ def compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y_fine_coarse, f
     for i in xrange(n_samples):
         # true_classes.append(Y_fine_coarse[i, fine_or_coarse[i]])
         if fine_or_coarse[i] == 0:  # should predict fine
-            true_classes.append(Y_fine_coarse[i, 0])
+            true_classes.append(N_COARSE_CIFAR + Y_fine_coarse[i, 0])
+            # use number of coarse classes as offset, so fine and coarse don't overlap
         else:  # shoud predict coarse
             true_classes.append(Y_fine_coarse[i, 1])
+    true_classes = np.array(true_classes)
     acc = accuracy_score(true_classes, final_pred_classes)
     return acc
 
@@ -109,18 +124,47 @@ def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=None):
             if fine_or_coarse_acc > best_acc:
                 best_acc = fine_or_coarse_acc
                 best_thres = confid_threshold
-            print("confid_threshold: {}, Accuracy for predict coarse OR fine: {}".format(confid_threshold, fine_or_coarse_acc))
-        print ("best confid_threshold: {}, Best accuracy for predict coarse OR fine: {}".format(best_thres, best_acc))
+            print("confid_threshold: {}, hierarchical accuracy: {}".format(confid_threshold, fine_or_coarse_acc))
+        print ("best confid_threshold: {}, best hierarchical accuracy: {}".format(best_thres, best_acc))
     else:
         final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs,
                                                           confid_threshold=confid_threshold)
         fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
-        print("confid_threshold: {}, Accuracy for predict coarse OR fine: {}".format(confid_threshold,
+        print("confid_threshold: {}, hierarchical accuracy: {}".format(confid_threshold,
                                                                                      fine_or_coarse_acc))
+
+def examine_images_and_predictions_pyramid(model, X, y, confid_threshold=74):
+    # add third column to say which one predicted
+    fine_pred_probs, coarse_pred_probs = model.predict_both_fine_and_coarse(X)
+    fine_confidence_scores = compute_confidence_scores(fine_pred_probs)
+    coarse_pred_classes = np.argmax(coarse_pred_probs, axis=1)
+    fine_pred_classes = np.argmax(fine_pred_probs, axis=1)
+
+    y_fine, y_coarse = y[:,0], y[:,1]
+    fine_label_names, coarse_label_names = load_cifar100_label_names(label_type='all')
+
+    for i in xrange(50):
+        img = X[i]
+        img = denormalize_image(img, mean=MEAN_PIXEL_CIFAR)
+        plt.figure(num=None, figsize=(1, 1), dpi=32, facecolor='w', edgecolor='k')
+        plt.imshow(img.astype(np.uint8), interpolation='nearest')
+        plt.axis('off')
+        plt.show()
+        c_pred_label = coarse_label_names[coarse_pred_classes[i]]
+        c_true_label = coarse_label_names[y_coarse[i]]
+        f_pred_label = fine_label_names[fine_pred_classes[i]]
+        f_true_label = fine_label_names[y_fine[i]]
+        fine_or_coarse_pred = None
+        if fine_confidence_scores[i] > confid_threshold:
+            labels = np.array([['coarse', c_pred_label, '', c_true_label],['fine', f_pred_label, 'X', f_true_label]])
+        else:
+            labels = np.array([['coarse', c_pred_label, 'X', c_true_label],['fine', f_pred_label, '', f_true_label]])
+        print (tabulate(labels, headers=['', 'Predicted Label', 'Model Choice', 'True Label'], tablefmt='orgtbl'))
+
 
 
 if __name__ == "__main__":
     pyramid_model = PyramidWrapper(checkpoint_model_id="pyramid_cifar100")
     X, Y, fine_or_coarse = load_data_pyramid(return_subset='test_only')
     # evaluate_predictions(pyramid_model, X[:10], Y[:10], fine_or_coarse[:10], confid_threshold=15)
-    evaluate_predictions(pyramid_model, X, Y, fine_or_coarse, confid_threshold=65)
+    evaluate_predictions(pyramid_model, X, Y, fine_or_coarse, confid_threshold=74)

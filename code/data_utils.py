@@ -159,6 +159,12 @@ def load_pyramid_test_subset(test_subset="seen_fine"):
         return X_test_A, y_test_A, fine_or_coarse_A, X_test_B, y_test_B, fine_or_coarse_B, X_test_C, y_test_C, fine_or_coarse_C
 
 
+def denormalize_image(img, mean=121):
+    img = (img + mean)
+    low, high = img.min(), img.max()
+    img = 255.0 * (img - low) / (high - low)
+    return img.astype(np.uint8)
+
 #####################################################################################################################
 
 
