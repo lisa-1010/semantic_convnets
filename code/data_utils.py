@@ -155,7 +155,8 @@ def load_pyramid_test_subset(test_subset="seen_fine"):
         return X_test_B, y_test_B, fine_or_coarse_B
     elif test_subset == "unseen":
         return X_test_C, y_test_C, fine_or_coarse_C
-
+    elif test_subset == "all":
+        return X_test_A, y_test_A, fine_or_coarse_A, X_test_B, y_test_B, fine_or_coarse_B, X_test_C, y_test_C, fine_or_coarse_C
 
 
 #####################################################################################################################

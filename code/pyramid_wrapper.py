@@ -85,7 +85,7 @@ def compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y_fine_coarse, f
     return acc
 
 
-def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=15):
+def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=None):
     # expects model to be an instance of PyramidWrapper
 
     fine_pred_probs, coarse_pred_probs = model.predict_both_fine_and_coarse(X)
@@ -102,14 +102,22 @@ def evaluate_predictions(model, X, Y, fine_or_coarse, confid_threshold=15):
 
     best_acc = 0.0
     best_thres = None
-    for confid_threshold in xrange(40,70):
-        final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs, confid_threshold=confid_threshold)
+    if confid_threshold == None:
+        for confid_threshold in xrange(60,85):
+            final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs, confid_threshold=confid_threshold)
+            fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
+            if fine_or_coarse_acc > best_acc:
+                best_acc = fine_or_coarse_acc
+                best_thres = confid_threshold
+            print("confid_threshold: {}, Accuracy for predict coarse OR fine: {}".format(confid_threshold, fine_or_coarse_acc))
+        print ("best confid_threshold: {}, Best accuracy for predict coarse OR fine: {}".format(best_thres, best_acc))
+    else:
+        final_pred_classes = model.predict_fine_or_coarse(fine_pred_probs, coarse_pred_probs,
+                                                          confid_threshold=confid_threshold)
         fine_or_coarse_acc = compute_accuracy_predict_fine_or_coarse(final_pred_classes, Y, fine_or_coarse)
-        if fine_or_coarse_acc > best_acc:
-            best_acc = fine_or_coarse_acc
-            best_thres = confid_threshold
-        print("confid_threshold: {}, Accuracy for predict coarse OR fine: {}".format(confid_threshold, fine_or_coarse_acc))
-    print ("best confid_threshold: {}, Best accuracy for predict coarse OR fine: {}".format(best_thres, best_acc))
+        print("confid_threshold: {}, Accuracy for predict coarse OR fine: {}".format(confid_threshold,
+                                                                                     fine_or_coarse_acc))
+
 
 if __name__ == "__main__":
     pyramid_model = PyramidWrapper(checkpoint_model_id="pyramid_cifar100")

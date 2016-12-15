@@ -1,3 +1,6 @@
+MEAN_PIXEL_CIFAR = 121.5
+
+
 DATASET_TO_N_CLASSES = {
     'cifar10' : 10,
     'cifar100_coarse': 20,
